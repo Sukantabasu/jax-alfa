@@ -1,0 +1,111 @@
+JAX-ALFA: JAX-powered Atmospheric LES For All
+=============================================
+
+.. image:: _static/logo.png
+   :width: 300px
+   :align: center
+
+Overview
+--------
+
+JAX-ALFA is a JAX-based large-eddy simulation framework for atmospheric
+boundary layer simulations. It leverages JAX's CPU/GPU/TPU acceleration
+capabilities to provide highly efficient cross-platform simulations
+without any code changes.
+
+Features
+--------
+
+- JAX-accelerated computations with optional GPU support
+- Spectral methods for horizontal derivatives
+- Finite difference methods for vertical derivatives
+- Dynamic SGS coefficient computation
+
+Requirements
+------------
+
+- Python 3.8+
+- JAX
+- NumPy
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Change Log
+
+   modules/Log
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting Started
+
+   modules/Introduction
+   modules/Installation
+   modules/License
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Case Studies
+
+   examples/CBL_N91/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Initialization Modules (INI)
+
+   modules/Config
+   modules/Imports
+   modules/Initialization
+   modules/Preprocess
+   modules/Utilities
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Main Program
+
+   modules/Main
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Navier-Stokes Equations (NSE)
+
+   modules/NSE_AllTerms
+   modules/NSE_AdvectionTerms
+   modules/NSE_BuoyancyTerms
+   modules/NSE_PressureTerms
+   modules/NSE_SGSTerms
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Subgrid-Scale Modeling (SGS)
+
+   modules/StrainRates
+   modules/SGSStresses
+   modules/LASDD
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Core Operations (OPS)
+
+   modules/FFT
+   modules/Filtering
+   modules/Derivatives
+   modules/Dealiasing
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Additional Resources
+
+   modules/Examples
+   modules/modules
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

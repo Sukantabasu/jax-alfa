@@ -1,7 +1,5 @@
 sphinx
 sphinx_rtd_theme
-sphinx.ext.autodoc
-sphinx.ext.napoleon
 sphinx_math_dollar
 sphinx-copybutton
 myst-parser  

@@ -1,5 +1,5 @@
 """
-Utilies package for JAXLES
+Operations package for JAXLES
 
-Contains miscellaneous codes
+Contains FFT, filtering, dealiasing and derivative operations
 """

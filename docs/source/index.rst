@@ -2,7 +2,7 @@ JAX-ALFA: JAX-powered Atmospheric LES For All
 =============================================
 
 .. image:: _static/homepage.png
-   :width: 300px
+   :width: 400px
    :align: center
 
 Overview

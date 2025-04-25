@@ -1,7 +1,7 @@
 JAX-ALFA: JAX-powered Atmospheric LES For All
 =============================================
 
-.. image:: _static/logo.png
+.. image:: _static/homepage.png
    :width: 300px
    :align: center
 
@@ -16,10 +16,15 @@ without any code changes.
 Features
 --------
 
-- JAX-accelerated computations with optional GPU support
+- JAX-accelerated computations for CPUs & GPUs
 - Spectral methods for horizontal derivatives
 - Finite difference methods for vertical derivatives
 - Dynamic SGS coefficient computation
+
+Download
+--------
+The JAX-ALFA package can be downloaded from:
+https://github.com/Sukantabasu/jax-alfa
 
 Requirements
 ------------

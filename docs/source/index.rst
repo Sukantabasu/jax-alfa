@@ -56,7 +56,7 @@ Requirements
 
 .. toctree::
    :maxdepth: 1
-   :caption: Benchmark
+   :caption: Performance Benchmarks
 
    benchmark/Benchmark_notebook
 

@@ -1,7 +1,7 @@
-JAX-powered Atmospheric LES For All (JAX-ALFA)
-==============================================
+JAX-ALFA: JAX-**A**tmospheric **L**ES **F**or **A**ll
+=====================================================
 
-Under development. 
+**Under development.** 
 
 Read the tutorial here:
 

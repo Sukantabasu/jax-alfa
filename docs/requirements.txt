@@ -4,6 +4,7 @@ sphinx_math_dollar
 sphinx-copybutton
 myst-parser  
 nbsphinx  
-jax
+ipykernel
+jupyter_clientjax
 jaxlib
 numpy

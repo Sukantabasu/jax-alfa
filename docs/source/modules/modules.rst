@@ -18,7 +18,11 @@ API Reference
    NSE_TimeAdvancement
    StrainRates
    SGSStresses
-   LASDD
+   ScalarSGSFluxes
+   StaticSGS_Main
+   DynamicSGS_Main
+   DynamicSGS_LASDD
+   DynamicSGS_ScalarLASDD
    FFT
    Derivatives
    Dealiasing

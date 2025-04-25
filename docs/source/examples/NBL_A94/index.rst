@@ -1,5 +1,4 @@
 Neutral BL
 ==========
 
-.. toctree::
-   :maxdepth: 1
+Coming soon.

@@ -1,5 +1,4 @@
 Diurnal Cycle - WANGARA
 =======================
 
-.. toctree::
-   :maxdepth: 1
+Coming soon.

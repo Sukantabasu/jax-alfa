@@ -1,5 +1,4 @@
 Evening Transition
 ==================
 
-.. toctree::
-   :maxdepth: 1
+Coming soon.

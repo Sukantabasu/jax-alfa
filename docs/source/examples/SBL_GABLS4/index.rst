@@ -1,6 +1,4 @@
 Stable BL: GABLS4
 =================
 
-.. toctree::
-   :maxdepth: 1
-   
+Coming soon.

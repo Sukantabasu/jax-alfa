@@ -48,14 +48,14 @@ Requirements
    modules/License
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorial
 
    tutorial/Tutorial_notebook
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Benchmark
 
    benchmark/Benchmark_notebook
@@ -128,7 +128,6 @@ Requirements
    :maxdepth: 2
    :caption: Additional Resources
 
-   modules/Examples
    modules/modules
 
 Indices and tables

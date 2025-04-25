@@ -1,9 +1,8 @@
-Template for the Read the Docs tutorial
-=======================================
+JAX-powered Atmospheric LES For All (JAX-ALFA)
+==============================================
 
-This GitHub template includes fictional Python library
-with some basic Sphinx docs.
+Under development. 
 
 Read the tutorial here:
 
-https://docs.readthedocs.io/en/stable/tutorial/
+https://jax-alfa.readthedocs.io/index.html/

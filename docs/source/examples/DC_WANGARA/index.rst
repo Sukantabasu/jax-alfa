@@ -1,4 +1,4 @@
-Diurnal Cycle - WANGARA
+Diurnal Cycle - Wangara
 =======================
 
 Coming soon.

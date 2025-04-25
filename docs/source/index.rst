@@ -49,6 +49,19 @@ Requirements
 
 .. toctree::
    :maxdepth: 2
+   :caption: Tutorial
+
+   tutorial/Tutorial_notebook
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Benchmark
+
+   benchmark/Benchmark_notebook
+
+.. toctree::
+   :maxdepth: 2
    :caption: Case Studies
 
    examples/CBL_N91/index

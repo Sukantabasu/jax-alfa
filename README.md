@@ -1,4 +1,4 @@
-JAX-ALFA: JAX-**A**tmospheric **L**ES **F**or **A**ll
+JAX-ALFA: JAX-powered **A**tmospheric **L**ES **F**or **A**ll
 
 Under development. 
 

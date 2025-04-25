@@ -84,11 +84,3 @@ napoleon_type_aliases = None
 # Math settings
 math_dollar_inline = True
 math_dollar_display = True
-
-autodoc_mock_imports = [
-    'jax',
-    'jax.numpy',
-    'numpy',
-    'time',
-    'os'
-]

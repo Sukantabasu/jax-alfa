@@ -5,4 +5,4 @@ Under development.
 
 Read the tutorial here:
 
-https://jax-alfa.readthedocs.io/index.html/
+https://jax-alfa.readthedocs.io/index.html

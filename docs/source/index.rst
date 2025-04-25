@@ -107,7 +107,11 @@ Requirements
 
    modules/StrainRates
    modules/SGSStresses
-   modules/LASDD
+   modules/ScalarSGSFluxes
+   modules/StaticSGS_Main
+   modules/DynamicSGS_Main
+   modules/DynamicSGS_LASDD
+   modules/DynamicSGS_ScalarLASDD
 
 
 .. toctree::

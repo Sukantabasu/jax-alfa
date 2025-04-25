@@ -1,4 +1,4 @@
-JAX-ALFA: JAX-**A**tmospheric **L**arge **E**ddy **S**imulator with **F**lexible **A**cceleration
+JAX-ALFA: JAX-**A**tmospheric **L**ES **F**or **A**ll
 
 Under development. 
 

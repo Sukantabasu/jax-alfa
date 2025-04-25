@@ -5,6 +5,7 @@ sphinx-copybutton
 myst-parser  
 nbsphinx  
 ipykernel
-jupyter_clientjax
+jupyter_client
+jax
 jaxlib
 numpy

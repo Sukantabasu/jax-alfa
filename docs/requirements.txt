@@ -4,3 +4,6 @@ sphinx_math_dollar
 sphinx-copybutton
 myst-parser  
 nbsphinx  
+jax
+jaxlib
+numpy

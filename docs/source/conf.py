@@ -86,18 +86,9 @@ math_dollar_inline = True
 math_dollar_display = True
 
 autodoc_mock_imports = [
-    # External dependencies
     'jax',
     'jax.numpy',
     'numpy',
     'time',
-    'os',
-    'src',
-    'src.config',
-    'src.initialization',
-    'src.operations',
-    'src.pde',
-    'src.surface',
-    'src.subgridscale',
-    'src.utilities'
+    'os'
 ]

@@ -1,5 +1,5 @@
-FFT Computations (JAX)
-======================
+FFT Computations
+================
 
 .. automodule:: src.operations.FFT
    :members:

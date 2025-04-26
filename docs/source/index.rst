@@ -16,10 +16,13 @@ without any code changes.
 Features
 --------
 
-- JAX-accelerated computations for CPUs & GPUs
+- Incompressible flow solver
 - Spectral methods for horizontal derivatives
 - Finite difference methods for vertical derivatives
+- FFT-based direct Poisson solver
 - Dynamic SGS coefficient computation
+- JAX-accelerated computations for CPUs & GPUs
+- Either single or double precision computations
 
 Download
 --------

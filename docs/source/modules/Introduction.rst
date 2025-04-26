@@ -1,13 +1,18 @@
 Introduction
 ============
 
-JAX-ALFA (JAX-powered Atmospheric LES For All) is a computational fluid
-dynamics code implemented using JAX, designed for high-performance parallel
-processing and automatic differentiation capabilities.
+JAX-ALFA is a JAX-based large-eddy simulation framework for atmospheric
+boundary layer simulations. It leverages JAX's CPU/GPU/TPU acceleration
+capabilities to provide highly efficient cross-platform simulations
+without any code changes.
 
-Key Features
-------------
+Features
+--------
 
-* JAX-based GPU acceleration
-* Spectral methods for horizontal derivatives
-* Finite differences for vertical derivatives
+- Incompressible flow solver
+- Spectral methods for horizontal derivatives
+- Finite difference methods for vertical derivatives
+- FFT-based direct Poisson solver
+- Dynamic SGS coefficient computation
+- JAX-accelerated computations for CPUs & GPUs
+- Either single or double precision computations

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 project = 'JAX-ALFA'
 copyright = '2025, Sukanta Basu'
 author = 'Sukanta Basu'
-release = '0.1'
+release = '0.0.1'
 
 # General configuration
 extensions = [

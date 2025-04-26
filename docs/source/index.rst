@@ -74,55 +74,9 @@ Requirements
 
 .. toctree::
    :maxdepth: 1
-   :caption: Initialization Modules (INI)
+   :caption: Model Structure
 
-   modules/Config
-   modules/Imports
-   modules/Initialization
-   modules/Preprocess
-   modules/Utilities
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Main Program
-
-   modules/Main
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Navier-Stokes Equations (NSE)
-
-   modules/NSE_AllTerms
-   modules/NSE_AdvectionTerms
-   modules/NSE_BuoyancyTerms
-   modules/NSE_PressureTerms
-   modules/NSE_SGSTerms
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Subgrid-Scale Modeling (SGS)
-
-   modules/StrainRates
-   modules/SGSStresses
-   modules/ScalarSGSFluxes
-   modules/StaticSGS_Main
-   modules/DynamicSGS_Main
-   modules/DynamicSGS_LASDD
-   modules/DynamicSGS_ScalarLASDD
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Core Operations (OPS)
-
-   modules/FFT
-   modules/Filtering
-   modules/Derivatives
-   modules/Dealiasing
-
+   modules/ModelStructure
 
 .. toctree::
    :maxdepth: 2

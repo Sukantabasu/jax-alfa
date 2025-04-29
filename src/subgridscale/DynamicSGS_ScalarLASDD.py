@@ -14,13 +14,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-File: SGS_ScalarLASDD.py
-===========================
+File: DynamicSGS_ScalarLASDD.py
+===============================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-3
+:Date: 2025-4-29
 :Description: locally-averaged scale-dependent dynamic (LASDD) model
               for scalar transport
 """
@@ -53,20 +53,20 @@ from ..utilities.Utilities import Roots, Imfilter
 @jax.jit
 def ComputeBeta2(ff, ee, dd, cc, bb, aa):
     """
-    This function solves the polynomial: ff*x^5 + ee*x^4 + dd*x^3 + cc*x^2 + bb*x + aa = 0
-    for each vertical level to find the optimal filter ratio (beta2) used in the LASDD model
-    for scalar transport.
+    This function solves the polynomial:
+    ff*x^5 + ee*x^4 + dd*x^3 + cc*x^2 + bb*x + aa = 0
+    for each vertical level to find the optimal parameter beta2
+    used in the LASDD SGS model for scalar transport
 
     Parameters:
     -----------
-    ff, ee, dd, cc, bb, aa : jax.numpy.ndarray
+    ff, ee, dd, cc, bb, aa : ndarray
         1D arrays containing the polynomial coefficients at each vertical level
 
     Returns:
     --------
-    jax.numpy.ndarray
-        1D array of the maximum valid real root for each vertical level,
-        constrained between 0 and 5, with default value of 1.0 if no valid root is found
+    beta2 : ndarray
+        1D array of the maximum valid real root for each vertical level
     """
 
     def find_roots_for_level(k):
@@ -76,7 +76,8 @@ def ComputeBeta2(ff, ee, dd, cc, bb, aa):
         # Use initial guesses concentrated in the expected range (0.5-1.5)
         # with a few wider points to catch outliers
         guesses = jnp.array([0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.5])
-        roots = jax.vmap(lambda guess: Roots(coeffs, init_guess=guess))(guesses)
+        roots = jax.vmap(lambda guess:
+                         Roots(coeffs, init_guess=guess))(guesses)
 
         # Filter valid real roots
         valid_roots = jnp.where(
@@ -95,24 +96,24 @@ def ComputeBeta2(ff, ee, dd, cc, bb, aa):
     return jax.vmap(find_roots_for_level)(jnp.arange(ff.shape[0]))
 
 
-# ============================================================
+# ===================================================
 # Compute Cs2PrRatio coefficient at vertical level k
-# ============================================================
+# ===================================================
 
 @jax.jit
 def Cs2PrRatio_at_level_k(T_up_k, T_dn_k):
     """
     Parameters:
     -----------
-    T_up_k : jax.numpy.ndarray
+    T_up_k : ndarray
         2D horizontal slice of T_up at level k
-    T_dn_k : jax.numpy.ndarray
+    T_dn_k : ndarray
         2D horizontal slice of T_dn at level k
 
     Returns:
     --------
-    jax.numpy.ndarray
-        2D array of the turbulent Prandtl number coefficient at level k
+    Cs2PrRatio : ndarray
+        2D array of Cs2/Pr at level k
     """
 
     T_up_F = Imfilter(T_up_k)
@@ -130,9 +131,9 @@ def Cs2PrRatio_at_level_k(T_up_k, T_dn_k):
     return Cs2PrRatio
 
 
-# ============================================================
+# ==============================================
 # Main LASDD code for SGS scalar transport model
-# ============================================================
+# ==============================================
 
 @jax.jit
 def ScalarLASDD(
@@ -147,29 +148,29 @@ def ScalarLASDD(
 
     Parameters:
     -----------
-    u_, v_, w_ : jax.numpy.ndarray
-        3D arrays of filtered velocity components
-    u_hat, v_hat, w_hat : jax.numpy.ndarray
-        3D arrays of level-1 filtered velocity components
-    u_hatd, v_hatd, w_hatd : jax.numpy.ndarray
-        3D arrays of level-2 filtered velocity components
-    TH : jax.numpy.ndarray
-        3D array of potential temperature
-    dTHdx, dTHdy, dTHdz : jax.numpy.ndarray
-        3D arrays of potential temperature gradients
-    S, S_hat, S_hatd : jax.numpy.ndarray
-        3D arrays of strain rate magnitude and its filtered versions
-    ZeRo3D : jax.numpy.ndarray
-        3D array initialized with zeros
+    u_, v_, w_ : ndarray
+        Interpolated velocity fields
+    u_hat, v_hat, w_hat : ndarray
+        Level-1 filtered velocity components
+    u_hatd, v_hatd, w_hatd : ndarray
+        Level-2 filtered velocity components
+    TH : ndarray
+        Potential temperature field
+    dTHdx, dTHdy, dTHdz : ndarray
+        Potential temperature gradients
+    S, S_hat, S_hatd : ndarray
+        Strain rate magnitude and its filtered versions
+    ZeRo3D : ndarray
+        Pre-allocated zero arrays
 
     Returns:
     --------
-    Cs2PrRatio_3D : jax.numpy.ndarray
-        3D field of Cs2PrRatio
-    Cs2PrRatio_1D : jax.numpy.ndarray
-        1D profile of Cs2PrRatio
-    beta2_1D : jax.numpy.ndarray
-        1D profile of beta2 (filter width ratio)
+    Cs2PrRatio_3D : ndarray
+        Cs2PrRatio field
+    Cs2PrRatio_1D : ndarray
+        1D averaged profile of Cs2PrRatio
+    beta2_1D : ndarray
+        1D profile of beta2
     """
 
     TH_ = TH.copy()
@@ -299,7 +300,8 @@ def ScalarLASDD(
             (L ** 4 * TFR ** 4) * e2_terms * beta2_3D ** 2)
 
     # Compute Cs2PrRatio_3D field for all levels using vmap
-    Cs2PrRatio_3D = jax.vmap(Cs2PrRatio_at_level_k, in_axes=(2, 2), out_axes=2)(T_up, T_dn)
+    Cs2PrRatio_3D = jax.vmap(Cs2PrRatio_at_level_k,
+                             in_axes=(2, 2), out_axes=2)(T_up, T_dn)
 
     # Compute 1D average from the 3D field
     Cs2PrRatio_1D = PlanarMean(Cs2PrRatio_3D)

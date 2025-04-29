@@ -64,7 +64,7 @@ def ComputeBeta1(ff, ee, dd, cc, bb, aa):
 
     Returns:
     --------
-    ndarray
+    beta1 : ndarray
         1D array of the maximum valid real root for each vertical level
     """
 
@@ -75,7 +75,8 @@ def ComputeBeta1(ff, ee, dd, cc, bb, aa):
         # Use initial guesses concentrated in the expected range (0.5-1.5)
         # with a few wider points to catch outliers
         guesses = jnp.array([0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.5])
-        roots = jax.vmap(lambda guess: Roots(coeffs, init_guess=guess))(guesses)
+        roots = jax.vmap(lambda guess:
+                         Roots(coeffs, init_guess=guess))(guesses)
 
         # Filter valid real roots
         valid_roots = jnp.where(

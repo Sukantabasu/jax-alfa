@@ -15,7 +15,7 @@
 
 """
 File: SCL_TimeAdvancement.py
-===============================
+=============================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,

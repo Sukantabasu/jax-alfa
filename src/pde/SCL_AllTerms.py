@@ -15,12 +15,12 @@
 
 """
 File: SCL_AllTerms.py
-========================
+======================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-4
+:Date: 2025-4-29
 :Description: computes all the right hand side terms of scalar equations
 """
 

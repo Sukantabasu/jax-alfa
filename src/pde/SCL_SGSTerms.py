@@ -15,12 +15,12 @@
 
 """
 File: SCL_SGSTerms.py
-===========================
+=====================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-5
+:Date: 2025-4-29
 :Description: computes the SGS scalar flux divergence terms
 """
 
@@ -40,7 +40,7 @@ from ..config.DerivedVars import *
 from ..operations.FFT import FFT
 
 # Import derivative functions
-from ..operations.Derivatives import Derivxy, Derivz_Generic_uvp, Derivz_Generic_w
+from ..operations.Derivatives import Derivxy, Derivz_Generic_w
 
 # Import SGS models
 from ..subgridscale.DynamicSGS_Main import DynamicSGSscalar
@@ -89,9 +89,9 @@ def DivFlux(
     return divq
 
 
-# =================================================
+# ================================================
 # Compute flux divergence using dynamic SGS models
-# =================================================
+# ================================================
 
 @jax.jit
 def DivFluxDynamicSGS(
@@ -107,16 +107,16 @@ def DivFluxDynamicSGS(
     Parameters:
     -----------
     dynamicSGSmomentum : tuple
-        Results from dynamic SGS momentum calculations, containing filtered velocity
-        components and strain rates
+        Results from dynamic SGS momentum calculations,
+        containing filtered velocity components and strain rates
     TH : ndarray of shape (nx, ny, nz)
         Potential temperature
     dTHdx, dTHdy, dTHdz : ndarray of shape (nx, ny, nz)
         Gradients of potential temperature
     SHFX : ndarray of shape (nx, ny)
-        Surface heat flux
+        Surface sensible heat flux
     ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft : ndarray
-        Pre-allocated arrays for calculations
+        Pre-allocated zero arrays for calculations
     kx2, ky2 : ndarray
         Wavenumber arrays for spectral derivatives
 
@@ -125,9 +125,9 @@ def DivFluxDynamicSGS(
     divq : ndarray of shape (nx, ny, nz)
         Divergence of scalar flux
     Cs2PrRatio_1D : ndarray of shape (nz)
-        1D profile of dynamic coefficient
+        1D profile of dynamic SGS coefficient (Cs2/Pr)
     beta2_1D : ndarray of shape (nz)
-        1D profile of filter width ratio for scalar model
+        1D profile of beta coefficient for scalar SGS model
     """
 
     # Unpack the dynamicSGSmomentum tuple
@@ -160,9 +160,9 @@ def DivFluxDynamicSGS(
     return qz, divq, Cs2PrRatio_1D, beta2_1D
 
 
-# =================================================
+# ======================================================
 # Compute scalar flux divergence using static SGS models
-# =================================================
+# ======================================================
 
 @jax.jit
 def DivFluxStaticSGS(
@@ -186,7 +186,7 @@ def DivFluxStaticSGS(
     SHFX : ndarray of shape (nx, ny)
         Surface heat flux
     ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft : ndarray
-        Pre-allocated arrays for calculations
+        Pre-allocated zero arrays for calculations
     kx2, ky2 : ndarray
         Wavenumber arrays for spectral derivatives
 

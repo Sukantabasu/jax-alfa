@@ -15,12 +15,12 @@
 
 """
 File: SCL_AdvectionTerms.py
-==================
+===========================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-4
+:Date: 2025-4-29
 :Description: computes the advective terms of scalar transport
 """
 
@@ -49,9 +49,9 @@ from ..initialization.Preprocess import Constant
 mx, my, nx_rfft, ny_rfft, mx_rfft, my_rfft = Constant()
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Use dealiasing in computing the advection terms of scalar transport
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 @jax.jit
 def ScalarAdvection_Dealias(u, v, w,
@@ -61,9 +61,9 @@ def ScalarAdvection_Dealias(u, v, w,
     Parameters:
     -----------
     u, v, w : ndarray of shape (nx, ny, nz)
-        Velocity components in x, y, and z directions respectively.
+        Velocity components in x, y, and z directions respectively
     dsdx, dsdy, dsdz : ndarray of shape (nx, ny, nz)
-        Derivatives of a scalar with respect to x, y and z.
+        Derivatives of a scalar with respect to x, y and z
     ZeRo3D_fft : ndarray
         Pre-allocated zero array for Fourier operations
     ZeRo3D_pad : ndarray
@@ -77,7 +77,7 @@ def ScalarAdvection_Dealias(u, v, w,
         Sum of convective terms with dealiasing applied
     """
 
-    # Dealias
+    # Dealias - forward operation
     u_pad = Dealias1(FFT(u), ZeRo3D_pad_fft)
     v_pad = Dealias1(FFT(v), ZeRo3D_pad_fft)
     w_pad = Dealias1(FFT(w), ZeRo3D_pad_fft)
@@ -96,18 +96,18 @@ def ScalarAdvection_Dealias(u, v, w,
     cc = cc.at[:, :, 0:nz - 1].set(cc1[:, :, 0:nz - 1] +
                                    StagGridAvg(cc2))
 
-    # Handle top boundary point
+    # Handle top boundary
     cc = cc.at[:, :, nz - 1].set(cc1[:, :, nz - 1] +
                                  cc2[:, :, nz - 1])
 
-    # Dealias the convective terms
+    # Dealias the convective terms - inverse operation
     scalarAdvectionSum = Dealias2(FFT_pad(cc), ZeRo3D_fft)
 
     return scalarAdvectionSum
 
 
 # ------------------------------------------------------------------------------
-# Compute the advection terms of scalar transport without using any dealiasing
+# Compute the advection terms of scalar transport without any dealiasing
 # ------------------------------------------------------------------------------
 
 @jax.jit
@@ -118,9 +118,9 @@ def ScalarAdvection_NoDealias(u, v, w,
     Parameters:
     -----------
     u, v, w : ndarray of shape (nx, ny, nz)
-        Velocity components in x, y, and z directions respectively.
+        Velocity components in x, y, and z directions respectively
     dsdx, dsdy, dsdz : ndarray of shape (nx, ny, nz)
-        Derivatives of a scalar with respect to x, y and z.
+        Derivatives of a scalar with respect to x, y and z
     ZeRo3D : ndarray of shape (nx, ny, nz)
         Pre-allocated zero array for calculations
 
@@ -138,12 +138,14 @@ def ScalarAdvection_NoDealias(u, v, w,
     scalarAdvectionSum = ZeRo3D.copy()
 
     # Compute convective terms with grid averaging for interior points
-    scalarAdvectionSum = scalarAdvectionSum.at[:, :, 0:nz - 1].set(cc1[:, :, 0:nz - 1] +
-                                                                   StagGridAvg(cc2))
+    scalarAdvectionSum = (
+        scalarAdvectionSum.at[:, :, 0:nz - 1].set(cc1[:, :, 0:nz - 1]
+                                                  + StagGridAvg(cc2)))
 
-    # Handle top boundary point
-    scalarAdvectionSum = scalarAdvectionSum.at[:, :, nz - 1].set(cc1[:, :, nz - 1] +
-                                                                 cc2[:, :, nz - 1])
+    # Handle top boundary
+    scalarAdvectionSum = (
+        scalarAdvectionSum.at[:, :, nz - 1].set(cc1[:, :, nz - 1]
+                                                + cc2[:, :, nz - 1]))
 
     return scalarAdvectionSum
 
@@ -159,15 +161,12 @@ def ScalarAdvection(
         ZeRo3D, ZeRo3D_fft, ZeRo3D_pad,
         ZeRo3D_pad_fft):
     """
-    Compute scalar advection terms, selecting between dealiased and
-    non-dealiased methods based on configuration.
-
     Parameters:
     -----------
     u, v, w : ndarray of shape (nx, ny, nz)
-        Velocity components in x, y, and z directions respectively.
+        Velocity components in x, y, and z directions respectively
     dsdx, dsdy, dsdz : ndarray of shape (nx, ny, nz)
-        Derivatives of a scalar with respect to x, y and z.
+        Derivatives of a scalar with respect to x, y and z
     ZeRo3D : ndarray of shape (nx, ny, nz)
         Pre-allocated zero array for calculations
     ZeRo3D_fft : ndarray
@@ -180,7 +179,7 @@ def ScalarAdvection(
     Returns:
     --------
     scalarAdvectionSum : ndarray of shape (nx, ny, nz)
-        Sum of convective terms from either dealiased or non-dealiased method
+        Sum of advection terms from either dealiased or non-dealiased method
     """
 
     if optDealias == 1:

@@ -14,19 +14,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-File: SGS_LASDD.py
-======================
+File: DynamicSGS_LASDD.py
+=========================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-3
+:Date: 2025-4-29
 :Description: locally-averaged scale-dependent dynamic (LASDD) model
-:Note: If debugging output from a function is needed, one can do::
-
-    import jax.debug
-    jax.debug.print("LM[] = {}", LM[9,9,0])
-    jax.debug.print("MM[] = {}", MM[9,9,0])
 """
 
 # ============================================================
@@ -57,19 +52,20 @@ from ..utilities.Utilities import Roots, Imfilter
 @jax.jit
 def ComputeBeta1(ff, ee, dd, cc, bb, aa):
     """
-    This function solves the polynomial: ff*x^5 + ee*x^4 + dd*x^3 + cc*x^2 + bb*x + aa = 0
-    for each vertical level to find the optimal filter ratio (beta1) used in the LASDD model
+    This function solves the polynomial:
+    ff*x^5 + ee*x^4 + dd*x^3 + cc*x^2 + bb*x + aa = 0
+    for each vertical level to find the optimal parameter beta1
+    used in the LASDD SGS model
 
     Parameters:
     -----------
-    ff, ee, dd, cc, bb, aa : jax.numpy.ndarray
+    ff, ee, dd, cc, bb, aa : ndarray
         1D arrays containing the polynomial coefficients at each vertical level
 
     Returns:
     --------
-    jax.numpy.ndarray
-        1D array of the maximum valid real root for each vertical level,
-        constrained between 0 and 5, with default value of 1.0 if no valid root is found
+    ndarray
+        1D array of the maximum valid real root for each vertical level
     """
 
     def find_roots_for_level(k):
@@ -98,9 +94,9 @@ def ComputeBeta1(ff, ee, dd, cc, bb, aa):
     return jax.vmap(find_roots_for_level)(jnp.arange(ff.shape[0]))
 
 
-# ============================================================
+# ===================================================
 # Compute Smagorinsky coefficient at vertical level k
-# ============================================================
+# ===================================================
 
 @jax.jit
 def Cs2_at_level_k(LM_k, MM_k):
@@ -114,7 +110,7 @@ def Cs2_at_level_k(LM_k, MM_k):
 
     Returns:
     --------
-    jax.numpy.ndarray
+    Cs2: ndarray
         2D array of the squared Smagorinsky coefficient at level k
     """
 
@@ -147,34 +143,34 @@ def LASDD(
     """
     Parameters:
     -----------
-    u, v, w : jax.numpy.ndarray
-        3D arrays of velocity components
-    S11, S22, S33 : jax.numpy.ndarray
-        3D arrays of normal strain rate components
-    S12, S13, S23 : jax.numpy.ndarray
-        3D arrays of shear strain rate components
-    S : jax.numpy.ndarray
-        3D array of strain rate magnitude
-    ZeRo3D : jax.numpy.ndarray
-        3D array initialized with zeros
+    u, v, w : ndarray
+        Velocity components
+    S11, S22, S33 : ndarray
+        Normal strain rate components
+    S12, S13, S23 : ndarray
+        Shear strain rate components
+    S : ndarray
+        Strain rate magnitude
+    ZeRo3D : ndarray
+        Pre-allocated zero arrays
 
     Returns:
     --------
-    u_, v_, w_ : jax.numpy.ndarray
-        3D arrays of adjusted velocity components
-    u_hat, v_hat, w_hat : jax.numpy.ndarray
-        3D arrays of level-1 filtered velocity components
-    u_hatd, v_hatd, w_hatd : jax.numpy.ndarray
-        3D arrays of level-2 filtered velocity components
-    S_hat, S_hatd : jax.numpy.ndarray
-        3D arrays of filtered strain rate magnitudes
-    Cs2_3D : jax.numpy.ndarray
-        3D field of Cs2
-    Cs2_1D_avg1 : jax.numpy.ndarray
+    u_, v_, w_ : ndarray
+        Interpolated velocity components
+    u_hat, v_hat, w_hat : ndarray
+        Level-1 filtered velocity components
+    u_hatd, v_hatd, w_hatd : ndarray
+        Level-2 filtered velocity components
+    S_hat, S_hatd : ndarray
+       Filtered strain rate magnitudes
+    Cs2_3D : ndarray
+        Cs2 field
+    Cs2_1D_avg1 : ndarray
         1D profile of Cs2 (method 1: square of mean of sqrt)
-    Cs2_1D_avg2 : jax.numpy.ndarray
+    Cs2_1D_avg2 : ndarray
         1D profile of Cs2 (method 2: direct mean)
-    beta1_1D : jax.numpy.ndarray
+    beta1_1D : ndarray
         1D profile of beta1
     """
 
@@ -227,9 +223,13 @@ def LASDD(
 
     # Compute filtered strain rate magnitudes
     S_hat = jnp.sqrt(2 * (S11_hat ** 2 + S22_hat ** 2 + S33_hat ** 2 +
-                          2 * S12_hat ** 2 + 2 * S13_hat ** 2 + 2 * S23_hat ** 2))
+                          2 * S12_hat ** 2 +
+                          2 * S13_hat ** 2 +
+                          2 * S23_hat ** 2))
     S_hatd = jnp.sqrt(2 * (S11_hatd ** 2 + S22_hatd ** 2 + S33_hatd ** 2 +
-                           2 * S12_hatd ** 2 + 2 * S13_hatd ** 2 + 2 * S23_hatd ** 2))
+                           2 * S12_hatd ** 2 +
+                           2 * S13_hatd ** 2 +
+                           2 * S23_hatd ** 2))
 
     # Compute and filter strain rate products
     SS11_hat = Filtering_Level1(FFT(S * S11))
@@ -247,11 +247,19 @@ def LASDD(
     SS23_hatd = Filtering_Level2(FFT(S * S23))
 
     # Compute L and Q tensors
-    L11, L22, L33 = uu_hat - u_hat ** 2, vv_hat - v_hat ** 2, ww_hat - w_hat ** 2
-    L12, L13, L23 = uv_hat - u_hat * v_hat, uw_hat - u_hat * w_hat, vw_hat - v_hat * w_hat
+    L11, L22, L33 = (uu_hat - u_hat ** 2,
+                     vv_hat - v_hat ** 2,
+                     ww_hat - w_hat ** 2)
+    L12, L13, L23 = (uv_hat - u_hat * v_hat,
+                     uw_hat - u_hat * w_hat,
+                     vw_hat - v_hat * w_hat)
 
-    Q11, Q22, Q33 = uu_hatd - u_hatd ** 2, vv_hatd - v_hatd ** 2, ww_hatd - w_hatd ** 2
-    Q12, Q13, Q23 = uv_hatd - u_hatd * v_hatd, uw_hatd - u_hatd * w_hatd, vw_hatd - v_hatd * w_hatd
+    Q11, Q22, Q33 = (uu_hatd - u_hatd ** 2,
+                     vv_hatd - v_hatd ** 2,
+                     ww_hatd - w_hatd ** 2)
+    Q12, Q13, Q23 = (uv_hatd - u_hatd * v_hatd,
+                     uw_hatd - u_hatd * w_hatd,
+                     vw_hatd - v_hatd * w_hatd)
 
     a1_terms = (L11 * SS11_hat + L22 * SS22_hat + L33 * SS33_hat +
                 2 * (L12 * SS12_hat + L13 * SS13_hat + L23 * SS23_hat))
@@ -282,13 +290,21 @@ def LASDD(
     d2_terms = (S11_hatd ** 2 + S22_hatd ** 2 + S33_hatd ** 2 +
                 2 * (S12_hatd ** 2 + S13_hatd ** 2 + S23_hatd ** 2))
 
-    d1 = PlanarMean((4 * L ** 4) * (TFR ** 4) * S_hat ** 2 * d1_terms)
-    d2 = PlanarMean((4 * L ** 4) * (TFR ** 8) * S_hatd ** 2 * d2_terms)
+    d1 = PlanarMean((4 * L ** 4) * (TFR ** 4) * (S_hat ** 2) * d1_terms)
+    d2 = PlanarMean((4 * L ** 4) * (TFR ** 8) * (S_hatd ** 2) * d2_terms)
 
-    e1_terms = (S11_hat * SS11_hat + S22_hat * SS22_hat + S33_hat * SS33_hat +
-                2 * (S12_hat * SS12_hat + S13_hat * SS13_hat + S23_hat * SS23_hat))
-    e2_terms = (S11_hatd * SS11_hatd + S22_hatd * SS22_hatd + S33_hatd * SS33_hatd +
-                2 * (S12_hatd * SS12_hatd + S13_hatd * SS13_hatd + S23_hatd * SS23_hatd))
+    e1_terms = (S11_hat * SS11_hat +
+                S22_hat * SS22_hat +
+                S33_hat * SS33_hat +
+                2 * (S12_hat * SS12_hat +
+                     S13_hat * SS13_hat +
+                     S23_hat * SS23_hat))
+    e2_terms = (S11_hatd * SS11_hatd +
+                S22_hatd * SS22_hatd +
+                S33_hatd * SS33_hatd +
+                2 * (S12_hatd * SS12_hatd +
+                     S13_hatd * SS13_hatd +
+                     S23_hatd * SS23_hatd))
 
     e1 = PlanarMean((8 * L ** 4) * (TFR ** 2) * S_hat * e1_terms)
     e2 = PlanarMean((8 * L ** 4) * (TFR ** 4) * S_hatd * e2_terms)
@@ -316,8 +332,19 @@ def LASDD(
     M23 = T1 * SS23_hat - T2 * beta1_3D * S_hat * S23_hat
 
     # Compute LM and MM terms
-    LM = (L11 * M11 + L22 * M22 + L33 * M33) + 2 * (L12 * M12 + L13 * M13 + L23 * M23)
-    MM = M11 ** 2 + M22 ** 2 + M33 ** 2 + 2 * (M12 ** 2 + M13 ** 2 + M23 ** 2)
+    LM = ((L11 * M11 +
+          L22 * M22 +
+          L33 * M33) +
+          2 * (L12 * M12 +
+               L13 * M13 +
+               L23 * M23))
+
+    MM = (M11 ** 2 +
+          M22 ** 2 +
+          M33 ** 2 +
+          2 * (M12 ** 2 +
+               M13 ** 2 +
+               M23 ** 2))
 
     # Compute Cs2_3D field for all levels using vmap
     Cs2_3D = jax.vmap(Cs2_at_level_k, in_axes=(2, 2), out_axes=2)(LM, MM)

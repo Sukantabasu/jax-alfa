@@ -1,7 +1,7 @@
 Scalar SGS Flux Computations
 ============================
 
-.. automodule:: src.subgridscale.SGSScalarSGSFluxes
+.. automodule:: src.subgridscale.ScalarSGSFluxes
    :members:
    :undoc-members:
    :show-inheritance:

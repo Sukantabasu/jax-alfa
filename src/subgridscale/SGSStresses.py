@@ -15,12 +15,12 @@
 
 """
 File: SGSStresses.py
-========================
+=====================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-7
+:Date: 2025-4-29
 :Description: computes SGS stresses
 """
 
@@ -55,21 +55,19 @@ from .DynamicSGS_ScalarLASDD import ScalarLASDD
 from ..utilities.Utilities import StagGridAvg
 
 
-# ============================================================
+# =========================================
 # Wall function to compute surface stresses
-# ============================================================
+# =========================================
 
 @jax.jit
 def Wall(u, v, M_sfc_loc, psi2D_m, psi2D_m0):
     """
-    Computes surface stresses using Monin-Obukhov similarity theory.
-
     Parameters:
     -----------
     u, v : ndarray
-        Velocity components near the surface
+        Velocity components near the surface (z = dz/2)
     M_sfc_loc : ndarray
-        Near-surface wind speed
+        Near-surface (z = dz/2) wind speed
     psi2D_m, psi2D_m0 : ndarray
         Stability correction functions at first level and surface
 
@@ -92,9 +90,9 @@ def Wall(u, v, M_sfc_loc, psi2D_m, psi2D_m0):
     return txz, tyz
 
 
-# ============================================================
+# =================================================
 # Compute SGS stresses on UVP nodes with dealiasing
-# ============================================================
+# =================================================
 
 @jax.jit
 def StressesUVPnodes_Dealias(
@@ -103,8 +101,6 @@ def StressesUVPnodes_Dealias(
         Cs2_3D_pad,
         ZeRo3D_fft):
     """
-    Computes SGS stresses at UVP nodes with dealiasing.
-
     Parameters:
     -----------
     S11_pad, S22_pad, S33_pad, S12_pad : ndarray
@@ -114,7 +110,7 @@ def StressesUVPnodes_Dealias(
     Cs2_3D_pad : ndarray
         Dealiased Smagorinsky coefficient field
     ZeRo3D_fft : ndarray
-        Pre-allocated zero array for FFT operations
+        Pre-allocated zero array for dealiasing
 
     Returns:
     --------
@@ -144,9 +140,9 @@ def StressesUVPnodes_Dealias(
     return txx, tyy, tzz, txy
 
 
-# ============================================================
+# ====================================================
 # Compute SGS stresses on UVP nodes without dealiasing
-# ============================================================
+# ====================================================
 
 
 @jax.jit
@@ -155,8 +151,6 @@ def StressesUVPnodes_NoDealias(
         S_uvp,
         Cs2_3D):
     """
-    Computes SGS stresses at UVP nodes without dealiasing.
-
     Parameters:
     -----------
     S11, S22, S33, S12 : ndarray
@@ -188,9 +182,9 @@ def StressesUVPnodes_NoDealias(
     return txx, tyy, tzz, txy
 
 
-# ============================================================
+# ===============================================
 # Compute SGS stresses on W nodes with dealiasing
-# ============================================================
+# ===============================================
 
 @jax.jit
 def StressesWnodes_Dealias(
@@ -200,8 +194,6 @@ def StressesWnodes_Dealias(
         u, v, M_sfc_loc, psi2D_m, psi2D_m0,
         ZeRo3D_fft):
     """
-    Computes SGS stresses at W nodes with dealiasing.
-
     Parameters:
     -----------
     S13_pad, S23_pad : ndarray
@@ -215,7 +207,7 @@ def StressesWnodes_Dealias(
     M_sfc_loc, psi2D_m, psi2D_m0 : ndarray
         Surface parameters for wall model
     ZeRo3D_fft : ndarray
-        Pre-allocated zero array for FFT operations
+        Pre-allocated zero array for dealiasing
 
     Returns:
     --------
@@ -228,20 +220,18 @@ def StressesWnodes_Dealias(
     tyz_pad = jnp.zeros_like(S_w_pad)
 
     # Interior points
-    txz_pad = txz_pad.at[:, :, 1:nz - 1].set(
-        -2 * (L ** 2) * StagGridAvg(Cs2_3D_pad[:, :, :nz - 1]) *
-        S_w_pad[:, :, 1:nz - 1] * S13_pad[:, :, 1:nz - 1]
-    )
-    tyz_pad = tyz_pad.at[:, :, 1:nz - 1].set(
-        -2 * (L ** 2) * StagGridAvg(Cs2_3D_pad[:, :, :nz - 1]) *
-        S_w_pad[:, :, 1:nz - 1] * S23_pad[:, :, 1:nz - 1]
-    )
+    preCompute = (-2 * (L ** 2) * StagGridAvg(Cs2_3D_pad[:, :, :nz - 1]) *
+                  S_w_pad[:, :, 1:nz - 1])
+    txz_pad = txz_pad.at[:, :, 1:nz - 1].set(preCompute *
+                                             S13_pad[:, :, 1:nz - 1])
+    tyz_pad = tyz_pad.at[:, :, 1:nz - 1].set(preCompute *
+                                             S23_pad[:, :, 1:nz - 1])
 
     # Top boundary conditions
     txz_pad = txz_pad.at[:, :, nz - 1].set(0)
     tyz_pad = tyz_pad.at[:, :, nz - 1].set(0)
 
-    # Apply dealiasing
+    # Apply dealiasing - inverse operations
     txz = Dealias2(FFT_pad(txz_pad), ZeRo3D_fft)
     tyz = Dealias2(FFT_pad(tyz_pad), ZeRo3D_fft)
 
@@ -290,14 +280,10 @@ def StressesWnodes_NoDealias(
     tyz = jnp.zeros_like(S_w)
 
     # Interior points
-    txz = txz.at[:, :, 1:nz - 1].set(
-        -2 * (L ** 2) * StagGridAvg(Cs2_3D[:, :, :nz - 1]) *
-        S_w[:, :, 1:nz - 1] * S13[:, :, 1:nz - 1]
-    )
-    tyz = tyz.at[:, :, 1:nz - 1].set(
-        -2 * (L ** 2) * StagGridAvg(Cs2_3D[:, :, :nz - 1]) *
-        S_w[:, :, 1:nz - 1] * S23[:, :, 1:nz - 1]
-    )
+    preCompute = (-2 * (L ** 2) * StagGridAvg(Cs2_3D[:, :, :nz - 1]) *
+                  S_w[:, :, 1:nz - 1])
+    txz = txz.at[:, :, 1:nz - 1].set(preCompute * S13[:, :, 1:nz - 1])
+    tyz = tyz.at[:, :, 1:nz - 1].set(preCompute * S23[:, :, 1:nz - 1])
 
     # Top boundary conditions
     txz = txz.at[:, :, nz - 1].set(0)

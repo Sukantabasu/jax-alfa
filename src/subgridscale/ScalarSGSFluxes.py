@@ -15,16 +15,16 @@
 
 """
 File: ScalarSGSFluxes.py
-==============================
+========================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-7
+:Date: 2025-4-29
 :Description: computes SGS scalar fluxes for the eddy-diffusivity model:
               q_i = -2(L^2) * Cs^2/Pr_t * |S| * (∂TH/∂x_i)
               where Cs^2/Pr_t is the model coefficient, |S| is the strain rate
-              magnitude, and ∂TH/∂x_i is the temperature gradient
+              magnitude, and ∂TH/∂x_i is the potential temperature gradient
 """
 
 # ============================================================
@@ -47,9 +47,9 @@ from ..utilities.Utilities import StagGridAvg
 from ..operations.Dealiasing import Dealias1, Dealias2
 
 
-# ============================================================
+# ======================================================
 # Compute SGS scalar fluxes on UVP nodes with dealiasing
-# ============================================================
+# ======================================================
 
 @jax.jit
 def ScalarFluxesUVPnodes_Dealias(
@@ -60,31 +60,24 @@ def ScalarFluxesUVPnodes_Dealias(
     Parameters:
     -----------
     dTHdx_pad, dTHdy_pad : ndarray
-        Dealiased temperature gradients at UVP nodes (u, v, pressure grid points)
+        Dealiased potential temperature gradients
     S_pad : ndarray
-        Dealiased strain rate magnitude at UVP nodes
+        Dealiased strain rate magnitude
     Cs2PrRatio_3D_pad : ndarray
-        Dealiased turbulent Prandtl number field (Cs^2/Pr_t)
+        Dealiased Cs^2/Pr_t field
     ZeRo3D_fft : ndarray
-        Pre-allocated zero array for FFT operations
+        Pre-allocated zero array for dealiasing
 
     Returns:
     --------
     qx, qy : ndarray
-        SGS scalar flux components at UVP nodes in x and y directions
-        computed using the eddy-diffusivity model: q_i = -2(L^2) * Cs^2/Pr_t * |S| * (∂TH/∂x_i)
-
-    Notes:
-    ------
-    This function applies dealiasing techniques to avoid aliasing errors in the
-    computation of SGS fluxes. The dealiasing is performed using the 3/2 rule
-    implemented in the Dealias2 function.
+        SGS scalar flux components in x and y directions
     """
 
     # Compute SGS scalar fluxes at UVP nodes
-    L_term = -2 * (L ** 2)
-    qx_pad = L_term * Cs2PrRatio_3D_pad * S_pad * dTHdx_pad
-    qy_pad = L_term * Cs2PrRatio_3D_pad * S_pad * dTHdy_pad
+    preCompute = -2 * (L ** 2) * Cs2PrRatio_3D_pad * S_pad
+    qx_pad = preCompute * dTHdx_pad
+    qy_pad = preCompute * dTHdy_pad
 
     # Set top boundary conditions
     qx_pad = qx_pad.at[:, :, nz - 1].set(0)
@@ -97,9 +90,9 @@ def ScalarFluxesUVPnodes_Dealias(
     return qx, qy
 
 
-# ============================================================
+# =========================================================
 # Compute SGS scalar fluxes on UVP nodes without dealiasing
-# ============================================================
+# =========================================================
 
 @jax.jit
 def ScalarFluxesUVPnodes_NoDealias(
@@ -109,29 +102,22 @@ def ScalarFluxesUVPnodes_NoDealias(
     Parameters:
     -----------
     dTHdx, dTHdy : ndarray
-        Temperature gradients at UVP nodes (u, v, pressure grid points)
+        Potential temperature gradients at UVP nodes
     S : ndarray
         Strain rate magnitude at UVP nodes
     Cs2PrRatio_3D : ndarray
-        Turbulent Prandtl number field (Cs^2/Pr_t)
+        Cs^2/Pr_t field
 
     Returns:
     --------
     qx, qy : ndarray
-        SGS scalar flux components at UVP nodes in x and y directions
-        computed using the eddy-diffusivity model: q_i = -2(L^2) * Cs^2/Pr_t * |S| * (∂TH/∂x_i)
-
-    Notes:
-    ------
-    This is the direct computation version without dealiasing. It's more
-    computationally efficient but may introduce aliasing errors in non-linear
-    operations. Used when optDealias = 0 in the configuration.
+        SGS scalar flux components in x and y directions
     """
 
     # Compute SGS scalar fluxes at UVP nodes
-    L_term = -2 * (L ** 2)
-    qx = L_term * Cs2PrRatio_3D * S * dTHdx
-    qy = L_term * Cs2PrRatio_3D * S * dTHdy
+    preCompute = -2 * (L ** 2) * Cs2PrRatio_3D * S
+    qx = preCompute * dTHdx
+    qy = preCompute * dTHdy
 
     # Set top boundary conditions
     qx = qx.at[:, :, nz - 1].set(0)
@@ -140,42 +126,34 @@ def ScalarFluxesUVPnodes_NoDealias(
     return qx, qy
 
 
-# ============================================================
+# ====================================================
 # Compute SGS scalar fluxes on W nodes with dealiasing
-# ============================================================
+# ====================================================
 
 @jax.jit
 def ScalarFluxesWnodes_Dealias(
         dTHdz_pad,
         S_pad, Cs2PrRatio_3D_pad,
-        SHFX,
+        qz_sfc,
         ZeRo3D_fft):
     """
     Parameters:
     -----------
     dTHdz_pad : ndarray
-        Dealiased temperature gradient in z-direction at W nodes (vertical velocity grid points)
+        Dealiased potential temperature gradient in z-direction
     S_pad : ndarray
-        Dealiased strain rate magnitude at W nodes
+        Dealiased strain rate magnitude
     Cs2PrRatio_3D_pad : ndarray
-        Dealiased turbulent Prandtl number field (Cs^2/Pr_t)
-    SHFX : ndarray
-        Surface heat flux, shape (nx, ny), represents the prescribed boundary condition
+        Dealiased Cs^2/Pr_t field
+    qz_sfc : ndarray
+        Surface heat flux
     ZeRo3D_fft : ndarray
-        Pre-allocated zero array for FFT operations
+        Pre-allocated zero array for dealiasing
 
     Returns:
     --------
     qz : ndarray
-        SGS scalar flux component in z-direction at W nodes computed using
-        the eddy-diffusivity model, with special handling for staggered grid.
-
-    Notes:
-    ------
-    This function computes the vertical flux component on the W-grid (staggered grid
-    for vertical velocity). It applies the StagGridAvg function to properly average
-    the Cs2PrRatio_3D_pad values to the W-grid points. The bottom boundary condition
-    is set using the prescribed surface heat flux (SHFX).
+        SGS scalar flux component in z-direction
     """
 
     # Initialize array for vertical flux
@@ -193,45 +171,37 @@ def ScalarFluxesWnodes_Dealias(
     # Apply dealiasing to vertical flux
     qz = Dealias2(FFT_pad(qz_pad), ZeRo3D_fft)
 
-    # Bottom boundary condition - prescribed surface flux
-    qz = qz.at[:, :, 0].set(SHFX)
+    # Bottom boundary condition
+    qz = qz.at[:, :, 0].set(qz_sfc)
 
     return qz
 
 
-# ============================================================
+# =======================================================
 # Compute SGS scalar fluxes on W nodes without dealiasing
-# ============================================================
+# =======================================================
 
 @jax.jit
 def ScalarFluxesWnodes_NoDealias(
         dTHdz,
         S, Cs2PrRatio_3D,
-        SHFX):
+        qz_sfc):
     """
     Parameters:
     -----------
     dTHdz : ndarray
-        Temperature gradient in z-direction at W nodes (vertical velocity grid points)
+        Potential temperature gradient in z-direction
     S : ndarray
-        Strain rate magnitude at W nodes
+        Strain rate magnitude
     Cs2PrRatio_3D : ndarray
-        Turbulent Prandtl number field (Cs^2/Pr_t)
-    SHFX : ndarray
-        Surface heat flux, shape (nx, ny), represents the prescribed boundary condition
+        Turbulent Cs^2/Pr_t field
+    qz_sfc : ndarray
+        Surface heat flux
 
     Returns:
     --------
     qz : ndarray
-        SGS scalar flux component in z-direction at W nodes computed using
-        the eddy-diffusivity model, with special handling for staggered grid.
-
-    Notes:
-    ------
-    This is the direct computation version without dealiasing. It performs the same
-    calculation as ScalarFluxesWnodes_Dealias but without the dealiasing steps.
-    The bottom boundary condition is prescribed by SHFX, and the top boundary
-    is set to zero to enforce the free-slip condition at the domain top.
+        SGS scalar flux component in z-direction
     """
 
     # Initialize array for vertical flux with correct dimensions
@@ -246,7 +216,7 @@ def ScalarFluxesWnodes_NoDealias(
     # Top boundary condition
     qz = qz.at[:, :, nz - 1].set(0)
 
-    # Bottom boundary condition - prescribed surface flux
-    qz = qz.at[:, :, 0].set(SHFX)
+    # Bottom boundary condition
+    qz = qz.at[:, :, 0].set(qz_sfc)
 
     return qz

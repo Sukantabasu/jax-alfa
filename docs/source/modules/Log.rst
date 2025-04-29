@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-JAX-ALFA 0.1 (April 17, 2025)
+JAX-ALFA 0.1 (April 29, 2025)
 -----------------------------
 
 * New Features

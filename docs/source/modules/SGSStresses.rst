@@ -6,8 +6,8 @@ SGS Stress Computations
    :undoc-members:
    :show-inheritance:
 
-Source Code: Stresses
----------------------
+Source Code: SGSStresses
+------------------------
 
 .. literalinclude:: ../../../src/subgridscale/SGSStresses.py
    :language: python

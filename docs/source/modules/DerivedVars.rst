@@ -6,8 +6,8 @@ Derived Variables
    :undoc-members:
    :show-inheritance:
 
-Source Code: Initialization
----------------------------
+Source Code: DerivedVars
+------------------------
 
 .. literalinclude:: ../../../src/config/DerivedVars.py
    :language: python

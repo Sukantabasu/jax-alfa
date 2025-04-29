@@ -6,7 +6,7 @@ Scalar SGS Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-SGSTerms
+Source Code: SCL-SGSTerms
 -------------------------
 
 .. literalinclude:: ../../../src/pde/SCL_SGSTerms.py

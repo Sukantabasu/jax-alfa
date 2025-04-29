@@ -6,7 +6,7 @@ Scalar All Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-AllTerms
+Source Code: SCL-AllTerms
 -------------------------
 
 .. literalinclude:: ../../../src/pde/SCL_AllTerms.py

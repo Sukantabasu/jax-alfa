@@ -6,8 +6,8 @@ SGS Model: LASDD (Scalar)
    :undoc-members:
    :show-inheritance:
 
-Source Code: Stresses
----------------------
+Source Code: DynamicSGS_ScalarLASDD
+-----------------------------------
 
 .. literalinclude:: ../../../src/subgridscale/DynamicSGS_ScalarLASDD.py
    :language: python

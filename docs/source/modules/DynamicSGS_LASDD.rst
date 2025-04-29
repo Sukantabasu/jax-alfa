@@ -6,8 +6,8 @@ SGS Model: LASDD (Momentum)
    :undoc-members:
    :show-inheritance:
 
-Source Code: Stresses
----------------------
+Source Code: DynamicSGS_LASDD
+-----------------------------
 
 .. literalinclude:: ../../../src/subgridscale/DynamicSGS_LASDD.py
    :language: python

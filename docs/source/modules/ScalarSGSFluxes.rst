@@ -6,8 +6,8 @@ Scalar SGS Flux Computations
    :undoc-members:
    :show-inheritance:
 
-Source Code: Stresses
----------------------
+Source Code: ScalarSGSFluxes
+----------------------------
 
 .. literalinclude:: ../../../src/subgridscale/ScalarSGSFluxes.py
    :language: python

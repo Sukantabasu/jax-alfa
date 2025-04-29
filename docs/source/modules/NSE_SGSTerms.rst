@@ -6,7 +6,7 @@ SGS Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-SGSTerms
+Source Code: NSE_SGSTerms
 -------------------------
 
 .. literalinclude:: ../../../src/pde/NSE_SGSTerms.py

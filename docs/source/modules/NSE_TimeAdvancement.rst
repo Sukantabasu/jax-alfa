@@ -6,8 +6,8 @@ Time Advancement
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSETimeAdvancement
--------------------------------
+Source Code: NSE_TimeAdvancement
+--------------------------------
 
 .. literalinclude:: ../../../src/pde/NSE_TimeAdvancement.py
    :language: python

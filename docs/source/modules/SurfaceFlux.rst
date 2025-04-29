@@ -6,8 +6,8 @@ Surface Flux Parameterization
    :undoc-members:
    :show-inheritance:
 
-Source Code: Utilities
-----------------------
+Source Code: SurfaceFlux
+------------------------
 
 .. literalinclude:: ../../../src/surface/SurfaceFlux.py
    :language: python

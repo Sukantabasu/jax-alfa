@@ -6,7 +6,7 @@ Pressure Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-PressureTerms
+Source Code: NSE_PressureTerms
 ------------------------------
 
 .. literalinclude:: ../../../src/pde/NSE_PressureTerms.py

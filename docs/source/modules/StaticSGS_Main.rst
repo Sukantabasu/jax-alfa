@@ -6,8 +6,8 @@ Static SGS Modeling: Main Code
    :undoc-members:
    :show-inheritance:
 
-Source Code: Stresses
----------------------
+Source Code: StaticSGS_Main
+---------------------------
 
 .. literalinclude:: ../../../src/subgridscale/StaticSGS_Main.py
    :language: python

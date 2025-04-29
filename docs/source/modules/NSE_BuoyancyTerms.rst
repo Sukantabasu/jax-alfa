@@ -6,7 +6,7 @@ Buoyancy Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-BuoyancyTerms
+Source Code: NSE_BuoyancyTerms
 ------------------------------
 
 .. literalinclude:: ../../../src/pde/NSE_BuoyancyTerms.py

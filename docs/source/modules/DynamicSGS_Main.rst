@@ -6,8 +6,8 @@ Dynamic SGS Modeling: Main Code
    :undoc-members:
    :show-inheritance:
 
-Source Code: Stresses
----------------------
+Source Code: DynamicSGS_Main
+----------------------------
 
 .. literalinclude:: ../../../src/subgridscale/DynamicSGS_Main.py
    :language: python

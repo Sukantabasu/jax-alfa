@@ -6,7 +6,7 @@ All Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-AllTerms
+Source Code: NSE_AllTerms
 -------------------------
 
 .. literalinclude:: ../../../src/pde/NSE_AllTerms.py

@@ -6,7 +6,7 @@ Scalar Advection Terms
    :undoc-members:
    :show-inheritance:
 
-Source Code: NSE-AdvectionTerms
+Source Code: SCL-AdvectionTerms
 -------------------------------
 
 .. literalinclude:: ../../../src/pde/SCL_AdvectionTerms.py

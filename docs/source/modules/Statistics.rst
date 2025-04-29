@@ -6,8 +6,8 @@ Compute Statistics
    :undoc-members:
    :show-inheritance:
 
-Source Code: Utilities
-----------------------
+Source Code: Statistics
+-----------------------
 
 .. literalinclude:: ../../../src/utilities/Statistics.py
    :language: python

@@ -20,8 +20,8 @@ File: StaticSGS_Main.py
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-7
-:Description: static SGS modeling
+:Date: 2025-4-29
+:Description: static SGS modeling - main code
 """
 
 # ============================================================
@@ -48,8 +48,10 @@ from .SGSStresses import StressesUVPnodes_Dealias, StressesWnodes_Dealias
 from .SGSStresses import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
 
 # Import scalar flux functions
-from .ScalarSGSFluxes import ScalarFluxesUVPnodes_Dealias, ScalarFluxesWnodes_Dealias
-from .ScalarSGSFluxes import ScalarFluxesUVPnodes_NoDealias, ScalarFluxesWnodes_NoDealias
+from .ScalarSGSFluxes import (ScalarFluxesUVPnodes_Dealias,
+                              ScalarFluxesWnodes_Dealias)
+from .ScalarSGSFluxes import (ScalarFluxesUVPnodes_NoDealias,
+                              ScalarFluxesWnodes_NoDealias)
 
 
 # ============================================================
@@ -65,34 +67,35 @@ def StaticSGS(
         u, v, M_sfc_loc, psi2D_m, psi2D_m0,
         ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft):
     """
-    Computes SGS stresses using a static Smagorinsky model.
-
     Parameters:
     -----------
     dudx, dvdx, dwdx, dudy, dvdy, dwdy, dudz, dvdz, dwdz : ndarray
         Velocity gradients
     Cs2_3D : ndarray
-        Static Smagorinsky coefficient field
+        Smagorinsky coefficient field
     u, v : ndarray
         Velocity components for wall model
     M_sfc_loc, psi2D_m, psi2D_m0 : ndarray
         Surface parameters for wall model
     ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft : ndarray
-        Pre-allocated arrays
+        Pre-allocated zero arrays
 
     Returns:
     --------
     txx, tyy, tzz, txy, txz, tyz : ndarray
         SGS stress components
     S_uvp, S_uvp_pad, S_w, S_w_pad : ndarray
-        Strain rate fields for potential reuse
+        Strain rate fields
     """
 
-    # ------------------------------------------------------------
+    # ----------------------------------------
     # Compute txx, tyy, tzz and txy components
-    # ------------------------------------------------------------
+    # ----------------------------------------
     if optDealias == 1:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S11, S22, S33,
          S12, S13, S23,
          S_uvp,
@@ -105,8 +108,14 @@ def StaticSGS(
                 dudz, dvdz, dwdz,
                 ZeRo3D, ZeRo3D_pad_fft))
 
+        # --------------------------------------
+        # Dealias Cs2 field
+        # --------------------------------------
         Cs2_3D_pad = Dealias1(FFT(Cs2_3D), ZeRo3D_pad_fft)
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txx, tyy, tzz, txy) = (
             StressesUVPnodes_Dealias(
                 S11_pad, S22_pad, S33_pad, S12_pad,
@@ -116,6 +125,9 @@ def StaticSGS(
 
     else:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S11, S22, S33,
          S12, S13, S23,
          S_uvp) = (
@@ -128,6 +140,9 @@ def StaticSGS(
         # create a dummy variable for passing
         S_uvp_pad = S_uvp
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txx, tyy, tzz, txy) = (
             StressesUVPnodes_NoDealias(
                 S11, S22, S33, S12,
@@ -139,6 +154,9 @@ def StaticSGS(
     # ------------------------------------------------------------
     if optDealias == 1:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S13_pad, S23_pad,
          S_w_pad) = (
             StrainsWnodes_Dealias(
@@ -150,6 +168,9 @@ def StaticSGS(
         # create a dummy variable for passing
         S_w = S_w_pad
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txz, tyz) = (
             StressesWnodes_Dealias(
                 S13_pad, S23_pad,
@@ -160,6 +181,9 @@ def StaticSGS(
 
     else:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S13, S23,
          S_w) = (
             StrainsWnodes_NoDealias(
@@ -171,6 +195,9 @@ def StaticSGS(
         # create a dummy variable for passing
         S_w_pad = S_w
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txz, tyz) = (
             StressesWnodes_NoDealias(
                 S13, S23,
@@ -184,9 +211,9 @@ def StaticSGS(
             S_w, S_w_pad)
 
 
-# ============================================================
+# =====================================================
 # Static SGS: compute scalar SGS fluxes on proper nodes
-# ============================================================
+# =====================================================
 
 @jax.jit
 def StaticSGSscalar(
@@ -194,11 +221,9 @@ def StaticSGSscalar(
         S_w, S_w_pad,
         Cs2PrRatio_3D,
         dTHdx, dTHdy, dTHdz,
-        SHFX,
+        qz_sfc,
         ZeRo3D_fft, ZeRo3D_pad_fft):
     """
-    Computes scalar SGS fluxes using a static eddy-diffusivity model.
-
     Parameters:
     -----------
     S_uvp, S_uvp_pad : ndarray
@@ -206,13 +231,13 @@ def StaticSGSscalar(
     S_w, S_w_pad : ndarray
         Strain rate magnitudes at W nodes
     Cs2PrRatio_3D : ndarray
-        Model coefficient field (Cs^2/Pr_t)
+        Cs^2/Pr_t field
     dTHdx, dTHdy, dTHdz : ndarray
-        Temperature gradients
-    SHFX : ndarray
+        Potential temperature gradients
+    qz_sfc : ndarray
         Surface heat flux
     ZeRo3D_fft, ZeRo3D_pad_fft : ndarray
-        Pre-allocated arrays
+        Pre-allocated zero arrays
 
     Returns:
     --------
@@ -245,22 +270,24 @@ def StaticSGSscalar(
                 dTHdz_pad,
                 S_w_pad,
                 Cs2PrRatio_3D_pad,
-                SHFX,
+                qz_sfc,
                 ZeRo3D_fft))
 
     else:
 
+        # Compute fluxes at UVP nodes
         (qx, qy) = (
             ScalarFluxesUVPnodes_NoDealias(
                 dTHdx, dTHdy,
                 S_uvp,
                 Cs2PrRatio_3D))
 
+        # Compute flux on W nodes
         qz = (
             ScalarFluxesWnodes_NoDealias(
                 dTHdz,
                 S_w,
                 Cs2PrRatio_3D,
-                SHFX))
+                qz_sfc))
 
     return qx, qy, qz

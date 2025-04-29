@@ -20,8 +20,8 @@ File: DynamicSGS_Main.py
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-4-5
-:Description: dynamic SGS modeling
+:Date: 2025-4-29
+:Description: dynamic SGS modeling - main code
 """
 
 # ============================================================
@@ -85,7 +85,7 @@ def DynamicSGS(
     psi2D_m, psi2D_m0 : ndarray of shape (nx, ny)
         Stability correction functions
     ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft : ndarray
-        Pre-allocated arrays for calculations
+        Pre-allocated zero arrays
 
     Returns:
     --------
@@ -94,9 +94,9 @@ def DynamicSGS(
     Cs2_1D_avg1, Cs2_1D_avg2 : ndarray of shape (nz)
         1D profiles of Smagorinsky coefficient (two averaging methods)
     beta1_1D : ndarray of shape (nz)
-        1D profile of filter width ratio
+        1D profile of beta parameter
     u_, v_, w_ : ndarray of shape (nx, ny, nz)
-        Adjusted velocity components
+        Interpolated velocity components
     u_hat, v_hat, w_hat : ndarray of shape (nx, ny, nz)
         Level-1 filtered velocity components
     u_hatd, v_hatd, w_hatd : ndarray of shape (nx, ny, nz)
@@ -109,11 +109,14 @@ def DynamicSGS(
         Filtered strain rate magnitudes
     """
 
-    # ------------------------------------------------------------
+    # ----------------------------------------
     # Compute txx, tyy, tzz and txy components
-    # ------------------------------------------------------------
+    # ----------------------------------------
     if optDealias == 1:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S11, S22, S33,
          S12, S13, S23,
          S_uvp,
@@ -127,7 +130,7 @@ def DynamicSGS(
                 ZeRo3D, ZeRo3D_pad_fft))
 
         # --------------------------------------
-        # Call LASDD model
+        # Call the LASDD model
         # --------------------------------------
         (u_, v_, w_,
          u_hat, v_hat, w_hat,
@@ -142,8 +145,14 @@ def DynamicSGS(
                 ZeRo3D))
         # --------------------------------------
 
+        # --------------------------------------
+        # Dealias Cs2 field
+        # --------------------------------------
         Cs2_3D_pad = Dealias1(FFT(Cs2_3D), ZeRo3D_pad_fft)
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txx, tyy, tzz, txy) = (
             StressesUVPnodes_Dealias(
                 S11_pad, S22_pad, S33_pad, S12_pad,
@@ -153,6 +162,9 @@ def DynamicSGS(
 
     else:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S11, S22, S33,
          S12, S13, S23,
          S_uvp) = (
@@ -166,7 +178,7 @@ def DynamicSGS(
         S_uvp_pad = S_uvp
 
         # --------------------------------------
-        # Call LASDD model
+        # Call the LASDD model
         # --------------------------------------
         (u_, v_, w_,
          u_hat, v_hat, w_hat,
@@ -181,6 +193,9 @@ def DynamicSGS(
                 ZeRo3D))
         # --------------------------------------
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txx, tyy, tzz, txy) = (
             StressesUVPnodes_NoDealias(
                 S11, S22, S33, S12,
@@ -192,6 +207,9 @@ def DynamicSGS(
     # ------------------------------------------------------------
     if optDealias == 1:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S13_pad, S23_pad,
          S_w_pad) = (
             StrainsWnodes_Dealias(
@@ -203,6 +221,9 @@ def DynamicSGS(
         # create a dummy variable for passing
         S_w = S_w_pad
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txz, tyz) = (
             StressesWnodes_Dealias(
                 S13_pad, S23_pad,
@@ -213,6 +234,9 @@ def DynamicSGS(
 
     else:
 
+        # --------------------------------------
+        # Compute strain rates
+        # --------------------------------------
         (S13, S23,
          S_w) = (
             StrainsWnodes_NoDealias(
@@ -224,6 +248,9 @@ def DynamicSGS(
         # create a dummy variable for passing
         S_w_pad = S_w
 
+        # --------------------------------------
+        # Compute SGS stresses
+        # --------------------------------------
         (txz, tyz) = (
             StressesWnodes_NoDealias(
                 S13, S23,
@@ -256,15 +283,13 @@ def DynamicSGSscalar(
         S_uvp_hat, S_uvp_hatd,
         TH,
         dTHdx, dTHdy, dTHdz,
-        SHFX,
+        qz_sfc,
         ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft):
     """
-    Computes scalar SGS fluxes on proper nodes using the dynamic model.
-
     Parameters:
     -----------
     u_, v_, w_ : ndarray of shape (nx, ny, nz)
-        Adjusted velocity components
+        Interpolated velocity components
     u_hat, v_hat, w_hat : ndarray of shape (nx, ny, nz)
         Level-1 filtered velocity components
     u_hatd, v_hatd, w_hatd : ndarray of shape (nx, ny, nz)
@@ -279,8 +304,8 @@ def DynamicSGSscalar(
         Potential temperature
     dTHdx, dTHdy, dTHdz : ndarray of shape (nx, ny, nz)
         Derivatives of potential temperature
-    SHFX : ndarray of shape (nx, ny)
-        Surface heat flux
+    qz_sfc : ndarray of shape (nx, ny)
+        Surface sensible heat flux
     ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft : ndarray
         Pre-allocated arrays for calculations
 
@@ -332,7 +357,7 @@ def DynamicSGSscalar(
                 dTHdz_pad,
                 S_w_pad,
                 Cs2PrRatio_3D_pad,
-                SHFX,
+                qz_sfc,
                 ZeRo3D_fft))
 
     else:
@@ -350,7 +375,7 @@ def DynamicSGSscalar(
                 dTHdz,
                 S_w,
                 Cs2PrRatio_3D,
-                SHFX))
+                qz_sfc))
 
     return (qx, qy, qz,
             Cs2PrRatio_1D, beta2_1D)

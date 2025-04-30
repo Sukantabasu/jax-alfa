@@ -33,6 +33,11 @@ import jax
 import jax.numpy as jnp
 from ..utilities.Utilities import StagGridAvg
 
+# Import configuration from namelist
+from ..config.Config import *
+
+# Import derived variables
+from ..config.DerivedVars import *
 
 # ============================================================
 #  Compute planar-averaged statistics
@@ -42,6 +47,7 @@ from ..utilities.Utilities import StagGridAvg
 def ComputeStats(
         u, v, w,
         TH,
+        dudz, dvdz,
         txy, txz, tyz, qz,
         StatsDict, ResetFlag,
         ZeRo3D):
@@ -50,13 +56,13 @@ def ComputeStats(
 
     Parameters:
     -----------
-    u, v, w : jnp.ndarray
+    u, v, w : ndarray
         Velocity components
-    M: jnp.ndarray
-        Horizontal wind speed
-    TH : jnp.ndarray
+    TH : ndarray
         Potential temperature
-    txy, txz, tyz : jnp.ndarray
+    dudz, dvdz : ndarray
+        Velocity gradients
+    txy, txz, tyz : ndarray
         SGS stress components
     StatsDict : dict
         Dictionary containing accumulated statistics
@@ -70,21 +76,26 @@ def ComputeStats(
     """
 
     # Extract existing statistics
-    u_avg = StatsDict["u"]
-    v_avg = StatsDict["v"]
-    w_avg = StatsDict["w"]
-    M_avg = StatsDict["M"]
+    U_avg = StatsDict["U"]
+    V_avg = StatsDict["V"]
+    W_avg = StatsDict["W"]
     TH_avg = StatsDict["TH"]
+
+    dUdz_avg = StatsDict["dUdz"]
+    dVdz_avg = StatsDict["dVdz"]
+
     u2_avg = StatsDict["u2"]
     v2_avg = StatsDict["v2"]
     w2_avg = StatsDict["w2"]
     TH2_avg = StatsDict["TH2"]
+
     uv_avg = StatsDict["uv"]
     uw_avg = StatsDict["uw"]
     vw_avg = StatsDict["vw"]
     uTH_avg = StatsDict["uTH"]
     vTH_avg = StatsDict["vTH"]
     wTH_avg = StatsDict["wTH"]
+
     txy_avg = StatsDict["txy"]
     txz_avg = StatsDict["txz"]
     tyz_avg = StatsDict["tyz"]
@@ -98,11 +109,12 @@ def ComputeStats(
     # Reset statistics
     def ResetStats(_):
         return {
-            "u": ZeRo1D,
-            "v": ZeRo1D,
-            "w": ZeRo1D,
-            "M": ZeRo1D,
+            "U": ZeRo1D,
+            "V": ZeRo1D,
+            "W": ZeRo1D,
             "TH": ZeRo1D,
+            "dUdz": ZeRo1D,
+            "dVdz": ZeRo1D,
             "u2": ZeRo1D,
             "v2": ZeRo1D,
             "w2": ZeRo1D,
@@ -128,21 +140,23 @@ def ComputeStats(
         # Profiles of mean variables
         # ------------------------------------------------------------
 
-        mu = jnp.mean(u, axis=(0, 1)) + Ugal
-        mv = jnp.mean(v, axis=(0, 1))
-        mw = jnp.mean(w, axis=(0, 1))
+        mU = (jnp.mean(u, axis=(0, 1)) + Ugal) * u_scale
+        mV = jnp.mean(v, axis=(0, 1)) * u_scale
+        mW = jnp.mean(w, axis=(0, 1)) * u_scale
 
-        M = jnp.sqrt((u + Ugal) ** 2 + v ** 2)
-        mM = jnp.mean(M, axis=(0, 1))
+        mTH = jnp.mean(TH, axis=(0, 1)) * TH_scale
 
-        mTH = jnp.mean(TH, axis=(0, 1))
+        mdUdz = jnp.mean(dudz, axis=(0, 1)) * (u_scale / z_scale)
+        mdVdz = jnp.mean(dvdz, axis=(0, 1)) * (u_scale / z_scale)
 
         # Updated mean profiles
-        new_u_avg = u_avg + mu
-        new_v_avg = v_avg + mv
-        new_w_avg = w_avg + mw
-        new_M_avg = M_avg + mM
+        new_U_avg = U_avg + mU
+        new_V_avg = V_avg + mV
+        new_W_avg = W_avg + mW
         new_TH_avg = TH_avg + mTH
+
+        new_dUdz_avg = dUdz_avg + mdUdz
+        new_dVdz_avg = dVdz_avg + mdVdz
 
         # ------------------------------------------------------------
         # Profiles of resolved variances and horizontal fluxes
@@ -152,19 +166,19 @@ def ComputeStats(
         def ComputeLevel1(k):
 
             # Compute fluctuations
-            u_f = u[:, :, k] + Ugal - mu[k]
-            v_f = v[:, :, k] - mv[k]
-            w_f = w[:, :, k] - mw[k]
+            u_f = u[:, :, k] + Ugal - mU[k]
+            v_f = v[:, :, k] - mV[k]
+            w_f = w[:, :, k] - mW[k]
             TH_f = TH[:, :, k] - mTH[k]
 
             # Compute variances and horizontal fluxes
-            u2 = jnp.mean(u_f ** 2)
-            v2 = jnp.mean(v_f ** 2)
-            w2 = jnp.mean(w_f ** 2)
-            TH2 = jnp.mean(TH_f ** 2)
-            uv = jnp.mean(u_f * v_f)
-            uTH = jnp.mean(u_f * TH_f)
-            vTH = jnp.mean(v_f * TH_f)
+            u2 = jnp.mean(u_f ** 2) * (u_scale ** 2)
+            v2 = jnp.mean(v_f ** 2) * (u_scale ** 2)
+            w2 = jnp.mean(w_f ** 2) * (u_scale ** 2)
+            TH2 = jnp.mean(TH_f ** 2) * (TH_scale ** 2)
+            uv = jnp.mean(u_f * v_f) * (u_scale ** 2)
+            uTH = jnp.mean(u_f * TH_f) * (u_scale * TH_scale)
+            vTH = jnp.mean(v_f * TH_f) * (u_scale * TH_scale)
 
             return u2, v2, w2, TH2, uv, uTH, vTH
 
@@ -204,10 +218,10 @@ def ComputeStats(
         v_stag = v_stag.at[:, :, 0].set(v[:, :, 0])
         TH_stag = TH_stag.at[:, :, 0].set(TH[:, :, 0])
 
-        mu_stag = jnp.mean(u_stag, axis=(0, 1)) + Ugal
-        mv_stag = jnp.mean(v_stag, axis=(0, 1))
-        mw_stag = jnp.mean(w_stag, axis=(0, 1))
-        mTH_stag = jnp.mean(TH_stag, axis=(0, 1))
+        mu_stag = (jnp.mean(u_stag, axis=(0, 1)) + Ugal) * u_scale
+        mv_stag = jnp.mean(v_stag, axis=(0, 1)) * u_scale
+        mw_stag = jnp.mean(w_stag, axis=(0, 1)) * u_scale
+        mTH_stag = jnp.mean(TH_stag, axis=(0, 1)) * TH_scale
 
         # Compute fluxes at each vertical level
         def ComputeLevel2(k):
@@ -218,9 +232,9 @@ def ComputeStats(
             TH_stag_f = TH_stag[:, :, k] - mTH_stag[k]
 
             # Compute fluxes
-            uw = jnp.mean(u_stag_f * w_stag_f)
-            vw = jnp.mean(v_stag_f * w_stag_f)
-            wTH = jnp.mean(w_stag_f * TH_stag_f)
+            uw = jnp.mean(u_stag_f * w_stag_f) * (u_scale ** 2)
+            vw = jnp.mean(v_stag_f * w_stag_f) * (u_scale ** 2)
+            wTH = jnp.mean(w_stag_f * TH_stag_f) * (u_scale * TH_scale)
 
             return uw, vw, wTH
 
@@ -236,13 +250,14 @@ def ComputeStats(
         # Profiles of SGS stresses and fluxes
         # ------------------------------------------------------------
 
-        mtxy = jnp.mean(txy, axis=(0, 1))
-        mtxz = jnp.mean(txz, axis=(0, 1))
-        mtyz = jnp.mean(tyz, axis=(0, 1))
-        mqz = jnp.mean(qz, axis=(0, 1))
+        mtxy = jnp.mean(txy, axis=(0, 1)) * (u_scale ** 2)
+        mtxz = jnp.mean(txz, axis=(0, 1)) * (u_scale ** 2)
+        mtyz = jnp.mean(tyz, axis=(0, 1)) * (u_scale ** 2)
+        mqz = jnp.mean(qz, axis=(0, 1)) * (u_scale * TH_scale)
 
         # Note: average of momentum fluxes
-        ustar2 = jnp.mean(jnp.sqrt(txz[:, :, 0] ** 2 + tyz[:, :, 0] ** 2))
+        ustar2 = (jnp.mean(jnp.sqrt(txz[:, :, 0] ** 2 + tyz[:, :, 0] ** 2)) *
+                  (u_scale ** 2))
 
         # Updated mean profiles
         new_txy_avg = txy_avg + mtxy
@@ -253,11 +268,12 @@ def ComputeStats(
 
         # Create updated statistics dictionary
         return {
-            "u": new_u_avg,
-            "v": new_v_avg,
-            "w": new_w_avg,
-            "M": new_M_avg,
+            "U": new_U_avg,
+            "V": new_V_avg,
+            "W": new_W_avg,
             "TH": new_TH_avg,
+            "dUdz": new_dUdz_avg,
+            "dVdz": new_dVdz_avg,
             "u2": new_u2_avg,
             "v2": new_v2_avg,
             "w2": new_w2_avg,
@@ -306,11 +322,12 @@ def InitializeStats(nz, Ugal, ZeRo1D):
     """
 
     StatsDict = {
-        "u": ZeRo1D,
-        "v": ZeRo1D,
-        "w": ZeRo1D,
-        "M": ZeRo1D,
+        "U": ZeRo1D,
+        "V": ZeRo1D,
+        "W": ZeRo1D,
         "TH": ZeRo1D,
+        "dUdz": ZeRo1D,
+        "dVdz": ZeRo1D,
         "u2": ZeRo1D,
         "v2": ZeRo1D,
         "w2": ZeRo1D,

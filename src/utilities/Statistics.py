@@ -52,6 +52,8 @@ def ComputeStats(
     -----------
     u, v, w : jnp.ndarray
         Velocity components
+    M: jnp.ndarray
+        Horizontal wind speed
     TH : jnp.ndarray
         Potential temperature
     txy, txz, tyz : jnp.ndarray
@@ -71,6 +73,7 @@ def ComputeStats(
     u_avg = StatsDict["u"]
     v_avg = StatsDict["v"]
     w_avg = StatsDict["w"]
+    M_avg = StatsDict["M"]
     TH_avg = StatsDict["TH"]
     u2_avg = StatsDict["u2"]
     v2_avg = StatsDict["v2"]
@@ -86,6 +89,7 @@ def ComputeStats(
     txz_avg = StatsDict["txz"]
     tyz_avg = StatsDict["tyz"]
     qz_avg = StatsDict["qz"]
+    ustar2_avg = StatsDict["ustar2"]
 
     # Constants
     Ugal = StatsDict["Ugal"]
@@ -97,6 +101,7 @@ def ComputeStats(
             "u": ZeRo1D,
             "v": ZeRo1D,
             "w": ZeRo1D,
+            "M": ZeRo1D,
             "TH": ZeRo1D,
             "u2": ZeRo1D,
             "v2": ZeRo1D,
@@ -112,6 +117,7 @@ def ComputeStats(
             "txz": ZeRo1D,
             "tyz": ZeRo1D,
             "qz": ZeRo1D,
+            "ustar2": 0.0,
             "Ugal": Ugal,
             "ZeRo1D": ZeRo1D
         }
@@ -125,12 +131,17 @@ def ComputeStats(
         mu = jnp.mean(u, axis=(0, 1)) + Ugal
         mv = jnp.mean(v, axis=(0, 1))
         mw = jnp.mean(w, axis=(0, 1))
+
+        M = jnp.sqrt((u + Ugal) ** 2 + v ** 2)
+        mM = jnp.mean(M, axis=(0, 1))
+
         mTH = jnp.mean(TH, axis=(0, 1))
 
         # Updated mean profiles
         new_u_avg = u_avg + mu
         new_v_avg = v_avg + mv
         new_w_avg = w_avg + mw
+        new_M_avg = M_avg + mM
         new_TH_avg = TH_avg + mTH
 
         # ------------------------------------------------------------
@@ -230,17 +241,22 @@ def ComputeStats(
         mtyz = jnp.mean(tyz, axis=(0, 1))
         mqz = jnp.mean(qz, axis=(0, 1))
 
+        # Note: average of momentum fluxes
+        ustar2 = jnp.mean(jnp.sqrt(txz[:, :, 0] ** 2 + tyz[:, :, 0] ** 2))
+
         # Updated mean profiles
         new_txy_avg = txy_avg + mtxy
         new_txz_avg = txz_avg + mtxz
         new_tyz_avg = tyz_avg + mtyz
         new_qz_avg = qz_avg + mqz
+        new_ustar2_avg = ustar2_avg + ustar2
 
         # Create updated statistics dictionary
         return {
             "u": new_u_avg,
             "v": new_v_avg,
             "w": new_w_avg,
+            "M": new_M_avg,
             "TH": new_TH_avg,
             "u2": new_u2_avg,
             "v2": new_v2_avg,
@@ -256,6 +272,7 @@ def ComputeStats(
             "txz": new_txz_avg,
             "tyz": new_tyz_avg,
             "qz": new_qz_avg,
+            "ustar2": new_ustar2_avg,
             "Ugal": Ugal,
             "ZeRo1D": ZeRo1D
         }
@@ -292,6 +309,7 @@ def InitializeStats(nz, Ugal, ZeRo1D):
         "u": ZeRo1D,
         "v": ZeRo1D,
         "w": ZeRo1D,
+        "M": ZeRo1D,
         "TH": ZeRo1D,
         "u2": ZeRo1D,
         "v2": ZeRo1D,
@@ -307,6 +325,7 @@ def InitializeStats(nz, Ugal, ZeRo1D):
         "txz": ZeRo1D,
         "tyz": ZeRo1D,
         "qz": ZeRo1D,
+        "ustar2": 0.0,
         "Ugal": Ugal,
         "ZeRo1D": ZeRo1D
     }

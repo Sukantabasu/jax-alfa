@@ -122,23 +122,7 @@ def Imfilter(x):
 @jax.jit
 def Roots(coeffs, init_guess=1.0, tol=1e-6, max_iter=20):
     """
-    Finds a root of a polynomial using Laguerre's method.
-
-    Parameters:
-    -----------
-    coeffs : jnp.ndarray
-        Polynomial coefficients (highest degree first)
-    init_guess : float
-        Initial guess, default=1.0
-    tol : float
-        Convergence tolerance, default=1e-6
-    max_iter : int
-        Maximum iterations, default=20
-
-    Returns:
-    --------
-    float
-        A real root of the polynomial (NaN if not converged)
+    The corrected Roots function that your ComputeBeta1 should use
     """
 
     def polynomial(p, x):
@@ -152,26 +136,38 @@ def Roots(coeffs, init_guess=1.0, tol=1e-6, max_iter=20):
         d2p = jnp.polyder(jnp.polyder(p))
         return jnp.polyval(d2p, x)
 
-    def laguerre_step(x, _):
+    def cond_fn(state):
+        x, iteration, converged = state
+        return (iteration < max_iter) & (~converged)
+
+    def body_fn(state):
+        x, iteration, converged = state
+
         f_x = polynomial(coeffs, x)
         df_x = derivative(coeffs, x)
         d2f_x = second_derivative(coeffs, x)
 
-        G = df_x / (f_x + 1e-10)  # Avoid division by zero
+        G = df_x / (f_x + 1e-10)
         H = G ** 2 - d2f_x / (f_x + 1e-10)
 
-        denom1 = G + jnp.sqrt((coeffs.shape[0] - 1) * (coeffs.shape[0] * H - G ** 2))
-        denom2 = G - jnp.sqrt((coeffs.shape[0] - 1) * (coeffs.shape[0] * H - G ** 2))
+        denom1 = G + jnp.sqrt(
+            (coeffs.shape[0] - 1) * (coeffs.shape[0] * H - G ** 2))
+        denom2 = G - jnp.sqrt(
+            (coeffs.shape[0] - 1) * (coeffs.shape[0] * H - G ** 2))
 
         denom = jnp.where(jnp.abs(denom1) > jnp.abs(denom2), denom1, denom2)
 
         x_new = x - (coeffs.shape[0] - 1) / (denom + 1e-10)
-        return x_new, jnp.abs(x_new - x) < tol
 
-    # Run Laguerre's method iteratively
-    root, converged = jax.lax.scan(laguerre_step, init_guess, None, length=max_iter)
+        new_converged = jnp.abs(x_new - x) < tol
 
-    return jnp.where(converged, root, jnp.nan)  # Return NaN if not converged
+        return x_new, iteration + 1, new_converged
+
+    init_state = (init_guess, 0, False)
+    final_x, final_iter, final_converged = jax.lax.while_loop(cond_fn, body_fn,
+                                                              init_state)
+
+    return jnp.where(final_converged, final_x, jnp.nan)
 
 
 # ============================================================

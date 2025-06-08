@@ -84,15 +84,13 @@ def RHS_Momentum(u, v, w,
         # Compute mean velocity components at each vertical level
         u_bar = PlanarMean(u)
         v_bar = PlanarMean(v)
-        w_bar = PlanarMean(w)
 
         # Compute velocity fluctuations from mean
         u_fluc = u - u_bar.reshape(1, 1, -1)
         v_fluc = v - v_bar.reshape(1, 1, -1)
-        w_fluc = w - w_bar.reshape(1, 1, -1)
 
         RHS_u = RHS_u - RayleighDampCoeff_stag * u_fluc
         RHS_v = RHS_v - RayleighDampCoeff_stag * v_fluc
-        RHS_w = RHS_w - RayleighDampCoeff * w_fluc
+        RHS_w = RHS_w - RayleighDampCoeff * w  # assume w_bar = 0
 
     return RHS_u, RHS_v, RHS_w

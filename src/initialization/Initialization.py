@@ -129,16 +129,22 @@ def Initialize_RayleighDampingLayer():
     # Inverse non-dimensional relaxation time
     invRelaxTime_nondim = 1.0 / RelaxTime_nondim
 
+    # Valid for both full and half levels
+    z_top_nondim = l_z / z_scale
+
+    # Calculate the damping layer depth
+    RayleighDampThickness = z_top_nondim - z_damping_nondim
+
+    #--------------------------------------------
+    # Full levels
+    #--------------------------------------------
+
     # Generate height levels
     z_nondim = jnp.arange(nz) * dz
-    z_top_nondim = l_z / z_scale
 
     # Create mask for damping region
     RayleighDampMask = ((z_nondim >= z_damping_nondim) &
                         (z_nondim <= z_top_nondim))
-
-    # Calculate the damping strength where mask is True
-    RayleighDampThickness = z_top_nondim - z_damping_nondim
 
     # Compute damping coefficient where mask is True
     RayleighDampCoeff1D = jnp.where(
@@ -147,27 +153,33 @@ def Initialize_RayleighDampingLayer():
             jnp.pi * (z_nondim - z_damping_nondim) / RayleighDampThickness)),
         0.0)
 
-    RayleighDampCoeff1D = RayleighDampCoeff1D.at[nz-1].set(
-        RayleighDampCoeff1D[nz-2])
+    # Broadcast to 3D array
+    RayleighDampCoeff = jnp.broadcast_to(
+        RayleighDampCoeff1D.reshape(1, 1, nz),
+        (nx, ny, nz))
+
+    #--------------------------------------------
+    # Half levels
+    #--------------------------------------------
+
+    # Generate height levels
+    z_stag_nondim = (jnp.arange(nz) + 0.5) * dz
+
+    # Create mask for damping region
+    RayleighDampMask_stag = ((z_stag_nondim >= z_damping_nondim) &
+                             (z_stag_nondim <= z_top_nondim))
+
+    # Compute damping coefficient where mask is True
+    RayleighDampCoeff1D_stag = jnp.where(
+        RayleighDampMask_stag,
+        0.5 * invRelaxTime_nondim * (1.0 - jnp.cos(
+            jnp.pi * (z_stag_nondim - z_damping_nondim) /
+            RayleighDampThickness)),
+        0.0)
 
     # Broadcast to 3D array
-    RayleighDampCoeff = jnp.broadcast_to(RayleighDampCoeff1D.reshape(1, 1, nz),
-                                         (nx, ny, nz))
-
-    # Create staggered grid 3D array
-    RayleighDampCoeff_stag = jnp.zeros((nx, ny, nz))
-
-    # Use StagGridAvg for interior points
-    RayleighDampCoeff_stag = RayleighDampCoeff_stag.at[:, :, 1:nz - 1].set(
-        StagGridAvg(RayleighDampCoeff[:, :, 0:nz - 1])
-    )
-
-    # Handle bottom boundary
-    RayleighDampCoeff_stag = RayleighDampCoeff_stag.at[:, :, 0].set(0)
-
-    # Handle top boundary
-    RayleighDampCoeff_stag = RayleighDampCoeff_stag.at[:, :, nz - 1].set(
-        RayleighDampCoeff[:, :, nz - 1]
-    )
+    RayleighDampCoeff_stag = jnp.broadcast_to(
+        RayleighDampCoeff1D_stag.reshape(1, 1, nz),
+        (nx, ny, nz))
 
     return RayleighDampCoeff, RayleighDampCoeff_stag

@@ -5,6 +5,9 @@ examples/SBL_GABLS1/
 examples/SBL_GABLS3/
 examples/SBL_GABLS4/
 
+# Local utility scripts
+push_to_github.sh
+
 # Internal reports
 REPORT_*.md
 

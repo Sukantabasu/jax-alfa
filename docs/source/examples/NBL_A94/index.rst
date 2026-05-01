@@ -8,3 +8,4 @@ Neutral BL
    notebooks/NBL_A94_Description
    notebooks/NBL_A94_HorizontalCrossSections
    notebooks/NBL_A94_VerticalCrossSections
+   notebooks/NBL_A94_Profiles

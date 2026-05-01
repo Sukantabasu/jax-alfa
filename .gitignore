@@ -7,7 +7,6 @@ examples/SBL_GABLS4/
 
 # Local utility scripts
 push_to_github.sh
-run_simulation.sh
 
 # Internal reports
 REPORT_*.md

@@ -4,7 +4,7 @@ API Reference
 .. toctree::
    :maxdepth: 4
 
-   Config
+   ConfigLoader
    Imports
    Initialization
    Preprocess

@@ -1,3 +1,6 @@
+# Internal reports
+REPORT_*.md
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,3 +1,10 @@
+# Examples not for public release
+examples/CBL_N91_G3/
+examples/CBL_N91_G5/
+examples/SBL_GABLS1/
+examples/SBL_GABLS3/
+examples/SBL_GABLS4/
+
 # Internal reports
 REPORT_*.md
 

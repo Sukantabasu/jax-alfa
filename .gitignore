@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# macOS
+.DS_Store
+
+# JAX-ALFA data files (too large for git)
+vel.ini
+TH.ini
+*.npz
+
+# Anaconda project files
+anaconda_projects/
+
+# Sphinx built documentation
+docs/build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.db

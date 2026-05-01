@@ -1,0 +1,11 @@
+sphinx
+sphinx_rtd_theme
+sphinx_math_dollar
+sphinx-copybutton
+myst-parser  
+nbsphinx  
+ipykernel
+jupyter_client
+jax
+jaxlib
+numpy

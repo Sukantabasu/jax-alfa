@@ -5,6 +5,9 @@ examples/SBL_GABLS1/
 examples/SBL_GABLS3/
 examples/SBL_GABLS4/
 
+docs/source/examples/NBL_A94/notebooks/NBL_A94_SimilarityTheory.ipynb
+docs/source/examples/NBL_A94/notebooks/ALFA_Visualization.ipynb
+
 # Local utility scripts
 push_to_github.sh
 

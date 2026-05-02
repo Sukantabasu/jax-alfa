@@ -66,7 +66,7 @@ istep = 1
 
 # Time stepping and simulation time
 dt = 5  # unit: sec
-SimTime = 100000  # unit: sec
+SimTime = 300000  # unit: sec
 
 # Galilean transformation
 Ugal = 3  # unit: m/s
@@ -120,7 +120,7 @@ dynamicSGS_call_time = 1
 
 # Filter to grid ratio (recommended: FGR = 2)
 # Dealiasing is not activated for FGR >= 2
-FGR = 1  # FGR = 1 implies implicit filtering
+FGR = 2  # FGR = 1 implies implicit filtering
 
 # Initialize Cs2 and Cs2PrRatio for static SGS models
 Cs2 = 0.1 ** 2
@@ -148,4 +148,4 @@ SampleInterval_sec = 10.0 # ideally, should be divisible by dt
 # Output averages every OutputInterval_sec (sec)
 OutputInterval_sec = 60.0 # ideally, should be divisible by dt
 # Output 3D fields every Output3DInterval_sec (sec)
-Output3DInterval_sec = 3600.0 # ideally, should be divisible by dt
+Output3DInterval_sec = 10*3600.0 # ideally, should be divisible by dt

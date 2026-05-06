@@ -120,7 +120,7 @@ dynamicSGS_call_time = 1
 
 # Filter to grid ratio (recommended: FGR = 2)
 # Dealiasing is not activated for FGR >= 2
-FGR = 2  # FGR = 1 implies implicit filtering
+FGR = 1  # FGR = 1 implies implicit filtering
 
 # Initialize Cs2 and Cs2PrRatio for static SGS models
 Cs2 = 0.1 ** 2

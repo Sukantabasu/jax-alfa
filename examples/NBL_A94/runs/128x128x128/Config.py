@@ -66,7 +66,7 @@ istep = 1
 
 # Time stepping and simulation time
 dt = 1  # unit: sec
-SimTime = 100000  # unit: sec
+SimTime = 300000  # unit: sec
 
 # Galilean transformation
 Ugal = 3  # unit: m/s
@@ -148,4 +148,4 @@ SampleInterval_sec = 10.0 # ideally, should be divisible by dt
 # Output averages every OutputInterval_sec (sec)
 OutputInterval_sec = 60.0 # ideally, should be divisible by dt
 # Output 3D fields every Output3DInterval_sec (sec)
-Output3DInterval_sec = 3600.0 # ideally, should be divisible by dt
+Output3DInterval_sec = 10*3600.0 # ideally, should be divisible by dt

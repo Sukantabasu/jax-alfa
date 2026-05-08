@@ -44,6 +44,9 @@ from ..utilities.Utilities import StagGridAvg
 
 InputDir = os.path.join(os.environ['JAXALFA_RUNDIR'], 'input')
 
+# Absolute path to the surface BC file (resolved once at import time)
+_SurfaceBCFile = os.path.join(os.environ['JAXALFA_RUNDIR'], SurfaceBCFile)
+
 
 # ============================================================
 # Load velocity field
@@ -95,6 +98,56 @@ def Initialize_TH():
 # ============================================================
 # Geostrophic wind components
 # ============================================================
+
+def Initialize_SurfaceBC():
+    """
+    Load the time-varying surface BC series (heat flux or surface temperature)
+    from SurfaceBCFile. Called once before the main loop when optSurfBC >= 1.
+
+    Validates that the file's dt_surf matches Config dt, and that the series
+    length matches nsteps+1.
+
+    Returns:
+    --------
+    SurfaceBC_series : jnp.ndarray of shape (nsteps+1,)
+        Non-dimensional surface BC values at every timestep from t=0 to t=SimTime.
+        For optSurfBC=1: non-dim heat flux  = data / (u_scale * TH_scale)
+        For optSurfBC=2: non-dim temperature = data / TH_scale
+    """
+
+    data = np.load(_SurfaceBCFile)
+
+    # --- Validation ---
+    dt_surf_file = float(data['dt_surf'])
+    if abs(dt_surf_file - dt) > 1e-6:
+        raise ValueError(
+            f"SurfaceBC file dt_surf={dt_surf_file:.6f} s does not match "
+            f"Config dt={dt:.6f} s. Re-run CreateSurfaceBC with the current Config."
+        )
+
+    optSurfBC_file = int(data['optSurfBC'])
+    if optSurfBC_file != optSurfBC:
+        raise ValueError(
+            f"SurfaceBC file optSurfBC={optSurfBC_file} does not match "
+            f"Config optSurfBC={optSurfBC}. Re-run CreateSurfaceBC."
+        )
+
+    series = data['data_series']
+    expected_len = nsteps + 1
+    if len(series) != expected_len:
+        raise ValueError(
+            f"SurfaceBC series length {len(series)} != nsteps+1={expected_len}. "
+            f"Re-run CreateSurfaceBC with the current Config."
+        )
+
+    # --- Non-dimensionalise ---
+    if optSurfBC == 1:
+        series_nondim = series / (u_scale * TH_scale)
+    else:
+        series_nondim = series / TH_scale
+
+    return jnp.array(series_nondim)
+
 
 def Initialize_GeoWind():
     """

@@ -22,8 +22,13 @@ File: SurfaceFlux.py
                 code restructuring, and performance optimization
 :Date: 2025-4-29
 :Description: surface flux calculation module.
-              Handles both homogeneous and heterogeneous boundary conditions,
-              and both constant heat flux and prescribed surface temperature.
+              Supports constant flux (optSurfBC=0), time-varying flux
+              (optSurfBC=1), and prescribed surface temperature (optSurfBC=2),
+              each in homogeneous (optSurfFlux=0) and heterogeneous
+              (optSurfFlux=1) flavours.
+
+              Sign convention: qz = -u* x th*
+              Stable BL: qz < 0 (downward), th* > 0
 """
 
 # ============================================================
@@ -108,195 +113,315 @@ def MOSTunstable(z_over_L):
 
 
 # ============================================================
-#  Homogeneous with constant heat flux
+#  Shared helper: update MOST stability functions
+# ============================================================
+
+def _update_MOSTfunctions(ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0,
+                          psi2D_h, psi2D_h0):
+    """
+    Compute Obukhov length and update all MOST stability functions.
+    Used internally by all six surface flux variants.
+
+    Returns updated (psi2D_m, psi2D_m0, psi2D_h, psi2D_h0, fi2D_m, fi2D_h)
+    and invOB.
+    """
+    invOB = -(vonk * g_nondim * qz_sfc_avg) / ((ustar ** 3) * TH_ref)
+    is_stable = qz_sfc_avg <= 0
+
+    z1_over_L   = (0.5 * dz) * invOB
+    z0m_over_L  = (z0m / z_scale) * invOB
+    z0T_over_L  = (z0T / z_scale) * invOB
+
+    psi2D_m, psi2D_h, fi2D_m, fi2D_h = jax.lax.cond(
+        is_stable,
+        lambda _: MOSTstable(z1_over_L),
+        lambda _: MOSTunstable(z1_over_L),
+        operand=None)
+
+    psi2D_m0, _, _, _ = jax.lax.cond(
+        is_stable,
+        lambda _: MOSTstable(z0m_over_L),
+        lambda _: MOSTunstable(z0m_over_L),
+        operand=None)
+
+    _, psi2D_h0, _, _ = jax.lax.cond(
+        is_stable,
+        lambda _: MOSTstable(z0T_over_L),
+        lambda _: MOSTunstable(z0T_over_L),
+        operand=None)
+
+    MOSTfunctions = (psi2D_m, psi2D_m0, psi2D_h, psi2D_h0, fi2D_m, fi2D_h)
+    return MOSTfunctions, invOB
+
+
+# ============================================================
+#  optSurfBC = 0 : constant prescribed heat flux
 # ============================================================
 
 @jax.jit
 def SurfaceFlux_HomogeneousConstantFlux(u, v, TH, MOSTfunctions):
     """
-    Calculate surface fluxes for homogeneous boundary condition
-    with constant sensible heat flux.
+    optSurfFlux=0, optSurfBC=0: homogeneous surface, constant heat flux.
 
     Parameters:
     -----------
     u, v : jnp.ndarray of shape (nx, ny, nz)
-        Velocity components
-    TH : jnp.ndarray of shape (nx, ny, nz)
-        Potential temperature
-    SensibleHeatFlux : prescribed value in config.py
-        Surface heat flux, unit: K m/s
+    TH   : jnp.ndarray of shape (nx, ny, nz)
+    MOSTfunctions : tuple of six (nx, ny) arrays
 
     Returns:
     --------
-    M_res : jnp.ndarray of shape (nx, ny)
-        Mean wind speed near surface
-    ustar : jnp.ndarray of shape (nx, ny)
-        Friction velocity
-    psi_m : jnp.ndarray of shape (nx, ny)
-        Stability function for momentum
-    psi_m0 : jnp.ndarray of shape (nx, ny)
-        Surface stability function for momentum
-    psi_h : jnp.ndarray of shape (nx, ny)
-        Stability function for heat
-    psi_h0 : jnp.ndarray of shape (nx, ny)
-        Surface stability function for heat
-    fi_m : jnp.ndarray of shape (nx, ny)
-        Normalized gradient function for momentum
-    fi_m : jnp.ndarray of shape (nx, ny)
-        Normalized gradient function for heat
-    SensibleHeatFlux : prescribed value in config.py
-        Surface heat flux, unit: K m/s
+    M_sfc_loc    : (nx, ny) surface wind speed
+    ustar        : (nx, ny) friction velocity
+    qz_sfc_avg   : scalar, non-dimensional surface heat flux (= qz = -u* x th*)
+    invOB        : (nx, ny) inverse Obukhov length
+    MOSTfunctions: updated tuple
     """
 
     One2D = jnp.ones((nx, ny))
 
-    # unpack MOST functions
     (psi2D_m, psi2D_m0,
      psi2D_h, psi2D_h0,
      fi2D_m, fi2D_h) = MOSTfunctions
 
     qz_sfc_avg = jnp.mean(qz_sfc)
 
-    # Compute grid average of wind speed at the lowest level
     M_sfc_avg = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
     M_sfc_loc = M_sfc_avg * One2D
 
-    # Grid average of potential temperature at the lowest level
     TH_sfc_avg = jnp.mean(TH[:, :, 0])
-    TH_sfc_loc = TH_sfc_avg * One2D
+    TH_ref     = TH_sfc_avg * One2D
 
-    # Compute ustar
-    denom = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
-    ustar = vonk * M_sfc_loc / denom
+    denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
+    ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
 
-    # Compute inverse Obukhov length
-    # OB = -(ustar ** 3) * TH_sfc_loc / (vonk * g_nondim * qz_sfc_avg)
-    invOB = -(vonk * g_nondim * qz_sfc_avg) / ((ustar ** 3) * TH_sfc_loc)
-    is_stable = qz_sfc_avg <= 0
-
-    # Compute updated stability functions
-    z1_over_L = (0.5 * dz) * invOB
-    z0m_over_L = (z0m / z_scale) * invOB
-    z0T_over_L = (z0T / z_scale) * invOB
-
-    psi2D_m, psi2D_h, fi2D_m, fi2D_h = jax.lax.cond(
-        is_stable,
-        lambda _: MOSTstable(z1_over_L),
-        lambda _: MOSTunstable(z1_over_L),
-        operand=None
-    )
-
-    psi2D_m0, _, fi2D_m0, _ = jax.lax.cond(
-        is_stable,
-        lambda _: MOSTstable(z0m_over_L),
-        lambda _: MOSTunstable(z0m_over_L),
-        operand=None
-    )
-
-    _, psi2D_h0, _, fi2D_h0 = jax.lax.cond(
-        is_stable,
-        lambda _: MOSTstable(z0T_over_L),
-        lambda _: MOSTunstable(z0T_over_L),
-        operand=None
-    )
-
-    MOSTfunctions = (psi2D_m, psi2D_m0, psi2D_h, psi2D_h0, fi2D_m, fi2D_h)
+    MOSTfunctions, invOB = _update_MOSTfunctions(
+        ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
 
     return M_sfc_loc, ustar, qz_sfc_avg, invOB, MOSTfunctions
 
-
-# ============================================================
-#  Heterogeneous with constant heat flux
-# ============================================================
 
 @jax.jit
 def SurfaceFlux_HeterogeneousConstantFlux(u, v, TH, MOSTfunctions):
     """
-    Calculate surface fluxes for heterogeneous boundary condition
-    with constant sensible heat flux.
-
-    Parameters:
-    -----------
-    u, v : jnp.ndarray of shape (nx, ny, nz)
-        Velocity components
-    TH : jnp.ndarray of shape (nx, ny, nz)
-        Potential temperature
-    SensibleHeatFlux : prescribed value in config.py
-        Surface heat flux, unit: K m/s
+    optSurfFlux=1, optSurfBC=0: heterogeneous surface, constant heat flux.
 
     Returns:
     --------
-    M_sfc_loc : jnp.ndarray of shape (nx, ny)
-        Mean wind speed near surface
-    ustar : jnp.ndarray of shape (nx, ny)
-        Friction velocity
-    psi2D_m : jnp.ndarray of shape (nx, ny)
-        Stability function for momentum
-    psi2D_m0 : jnp.ndarray of shape (nx, ny)
-        Surface stability function for momentum
-    psi2D_h : jnp.ndarray of shape (nx, ny)
-        Stability function for heat
-    psi2D_h0 : jnp.ndarray of shape (nx, ny)
-        Surface stability function for heat
-    fi2D_m : jnp.ndarray of shape (nx, ny)
-        Normalized gradient function for momentum
-    fi2D_m : jnp.ndarray of shape (nx, ny)
-        Normalized gradient function for heat
-    SensibleHeatFlux : prescribed value in config.py
-        Surface heat flux, unit: K m/s
+    M_sfc_loc    : (nx, ny)
+    ustar        : (nx, ny)
+    qz_sfc_avg   : scalar, non-dimensional surface heat flux
+    invOB        : (nx, ny)
+    MOSTfunctions: updated tuple
     """
 
-    One2D = jnp.ones((nx, ny))
-
-    # unpack MOST functions
     (psi2D_m, psi2D_m0,
      psi2D_h, psi2D_h0,
      fi2D_m, fi2D_h) = MOSTfunctions
 
     qz_sfc_avg = jnp.mean(qz_sfc)
 
-    # Compute grid average of wind speed at the lowest level
     M_sfc_loc = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
+    TH_ref    = TH[:, :, 0]
 
-    # Grid average of potential temperature at the lowest level
-    TH_sfc_loc = TH[:, :, 0]
+    denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
+    ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
 
-    # Compute ustar
-    denom = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
-    ustar = vonk * M_sfc_loc / denom
-
-    # Compute inverse Obukhov length
-    # OB = -(ustar ** 3) * TH_sfc_loc / (vonk * g_nondim * qz_sfc_avg)
-    invOB = -(vonk * g_nondim * qz_sfc_avg) / ((ustar ** 3) * TH_sfc_loc)
-    is_stable = qz_sfc_avg <= 0
-
-    # Compute updated stability functions
-    z1_over_L = (0.5 * dz) * invOB
-    z0m_over_L = (z0m / z_scale) * invOB
-    z0T_over_L = (z0T / z_scale) * invOB
-
-    psi2D_m, psi2D_h, fi2D_m, fi2D_h = jax.lax.cond(
-        is_stable,
-        lambda _: MOSTstable(z1_over_L),
-        lambda _: MOSTunstable(z1_over_L),
-        operand=None
-    )
-
-    psi2D_m0, _, fi2D_m0, _ = jax.lax.cond(
-        is_stable,
-        lambda _: MOSTstable(z0m_over_L),
-        lambda _: MOSTunstable(z0m_over_L),
-        operand=None
-    )
-
-    _, psi2D_h0, _, fi2D_h0 = jax.lax.cond(
-        is_stable,
-        lambda _: MOSTstable(z0T_over_L),
-        lambda _: MOSTunstable(z0T_over_L),
-        operand=None
-    )
-
-    MOSTfunctions = (psi2D_m, psi2D_m0, psi2D_h, psi2D_h0, fi2D_m, fi2D_h)
+    MOSTfunctions, invOB = _update_MOSTfunctions(
+        ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
 
     return M_sfc_loc, ustar, qz_sfc_avg, invOB, MOSTfunctions
 
+
+# ============================================================
+#  optSurfBC = 1 : time-varying prescribed heat flux
+# ============================================================
+
+@jax.jit
+def SurfaceFlux_HomogeneousVaryingFlux(u, v, TH, qz_sfc_t, MOSTfunctions):
+    """
+    optSurfFlux=0, optSurfBC=1: homogeneous surface, time-varying heat flux.
+
+    Parameters:
+    -----------
+    qz_sfc_t : scalar JAX value, non-dimensional heat flux at current timestep
+               (loaded from SurfaceBC.npz series, already non-dimensionalised)
+
+    Returns:
+    --------
+    M_sfc_loc    : (nx, ny)
+    ustar        : (nx, ny)
+    qz_sfc_2D    : (nx, ny) spatially uniform flux field
+    qz_sfc_avg   : scalar
+    invOB        : (nx, ny)
+    MOSTfunctions: updated tuple
+    """
+
+    One2D = jnp.ones((nx, ny))
+
+    (psi2D_m, psi2D_m0,
+     psi2D_h, psi2D_h0,
+     fi2D_m, fi2D_h) = MOSTfunctions
+
+    qz_sfc_avg = qz_sfc_t
+    qz_sfc_2D  = qz_sfc_t * One2D
+
+    M_sfc_avg = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
+    M_sfc_loc = M_sfc_avg * One2D
+
+    TH_sfc_avg = jnp.mean(TH[:, :, 0])
+    TH_ref     = TH_sfc_avg * One2D
+
+    denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
+    ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
+
+    MOSTfunctions, invOB = _update_MOSTfunctions(
+        ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
+
+    return M_sfc_loc, ustar, qz_sfc_2D, qz_sfc_avg, invOB, MOSTfunctions
+
+
+@jax.jit
+def SurfaceFlux_HeterogeneousVaryingFlux(u, v, TH, qz_sfc_t, MOSTfunctions):
+    """
+    optSurfFlux=1, optSurfBC=1: heterogeneous surface, time-varying heat flux.
+
+    Parameters:
+    -----------
+    qz_sfc_t : scalar JAX value, non-dimensional heat flux at current timestep
+
+    Returns:
+    --------
+    M_sfc_loc    : (nx, ny)
+    ustar        : (nx, ny)
+    qz_sfc_2D    : (nx, ny)
+    qz_sfc_avg   : scalar
+    invOB        : (nx, ny)
+    MOSTfunctions: updated tuple
+    """
+
+    One2D = jnp.ones((nx, ny))
+
+    (psi2D_m, psi2D_m0,
+     psi2D_h, psi2D_h0,
+     fi2D_m, fi2D_h) = MOSTfunctions
+
+    qz_sfc_avg = qz_sfc_t
+    qz_sfc_2D  = qz_sfc_t * One2D
+
+    M_sfc_loc = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
+    TH_ref    = TH[:, :, 0]
+
+    denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
+    ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
+
+    MOSTfunctions, invOB = _update_MOSTfunctions(
+        ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
+
+    return M_sfc_loc, ustar, qz_sfc_2D, qz_sfc_avg, invOB, MOSTfunctions
+
+
+# ============================================================
+#  optSurfBC = 2 : time-varying prescribed surface temperature
+# ============================================================
+
+@jax.jit
+def SurfaceFlux_HomogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
+                                                  MOSTfunctions):
+    """
+    optSurfFlux=0, optSurfBC=2: homogeneous surface, prescribed T_s(t).
+
+    The surface heat flux is diagnosed from MOST:
+        qz = u* x vonk x (TH_s - TH_air) / denom_h
+    consistent with qz = -u* x th*, where th* = vonk x (TH_air - TH_s) / denom_h.
+
+    Parameters:
+    -----------
+    TH_sfc_t : scalar JAX value, non-dimensional surface temperature at current
+               timestep (loaded from SurfaceBC.npz, divided by TH_scale)
+
+    Returns:
+    --------
+    M_sfc_loc    : (nx, ny)
+    ustar        : (nx, ny)
+    qz_sfc_2D    : (nx, ny) diagnosed surface heat flux
+    qz_sfc_avg   : scalar
+    invOB        : (nx, ny)
+    MOSTfunctions: updated tuple
+    """
+
+    One2D = jnp.ones((nx, ny))
+
+    (psi2D_m, psi2D_m0,
+     psi2D_h, psi2D_h0,
+     fi2D_m, fi2D_h) = MOSTfunctions
+
+    # Planar-mean surface wind and air temperature
+    M_sfc_avg  = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
+    TH_air_avg = jnp.mean(TH[:, :, 0])
+    M_sfc_loc  = M_sfc_avg * One2D
+    TH_air_loc = TH_air_avg * One2D
+
+    # Friction velocity (with floor to prevent near-zero division)
+    denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
+    ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
+
+    # Diagnose surface heat flux from prescribed surface temperature
+    # qz = -u* x th*,  th* = vonk x (TH_air - TH_s) / denom_h  (>0 for stable)
+    denom_h   = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
+    qz_sfc_2D = ustar * vonk * (TH_sfc_t - TH_air_loc) / denom_h
+    qz_sfc_avg = jnp.mean(qz_sfc_2D)
+
+    MOSTfunctions, invOB = _update_MOSTfunctions(
+        ustar, qz_sfc_avg, TH_air_loc, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
+
+    return M_sfc_loc, ustar, qz_sfc_2D, qz_sfc_avg, invOB, MOSTfunctions
+
+
+@jax.jit
+def SurfaceFlux_HeterogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
+                                                    MOSTfunctions):
+    """
+    optSurfFlux=1, optSurfBC=2: heterogeneous surface, prescribed T_s(t).
+
+    Uses local (per-column) wind speed and air temperature.
+    TH_sfc_t is spatially uniform but temporally varying.
+
+    Parameters:
+    -----------
+    TH_sfc_t : scalar JAX value, non-dimensional surface temperature
+
+    Returns:
+    --------
+    M_sfc_loc    : (nx, ny)
+    ustar        : (nx, ny)
+    qz_sfc_2D    : (nx, ny) diagnosed surface heat flux
+    qz_sfc_avg   : scalar
+    invOB        : (nx, ny)
+    MOSTfunctions: updated tuple
+    """
+
+    (psi2D_m, psi2D_m0,
+     psi2D_h, psi2D_h0,
+     fi2D_m, fi2D_h) = MOSTfunctions
+
+    # Local surface wind and air temperature
+    M_sfc_loc  = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
+    TH_air_loc = TH[:, :, 0]
+
+    # Friction velocity
+    denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
+    ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
+
+    # Diagnose surface heat flux
+    denom_h   = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
+    qz_sfc_2D = ustar * vonk * (TH_sfc_t - TH_air_loc) / denom_h
+    qz_sfc_avg = jnp.mean(qz_sfc_2D)
+
+    # Use planar-mean TH_air as reference for Obukhov length
+    TH_air_ref = jnp.mean(TH_air_loc) * jnp.ones((nx, ny))
+
+    MOSTfunctions, invOB = _update_MOSTfunctions(
+        ustar, qz_sfc_avg, TH_air_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
+
+    return M_sfc_loc, ustar, qz_sfc_2D, qz_sfc_avg, invOB, MOSTfunctions

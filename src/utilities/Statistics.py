@@ -47,7 +47,7 @@ from ..config.DerivedVars import *
 def ComputeStats(
         u, v, w, TH,
         dudz, dvdz, dTHdz,
-        M_sfc_loc, ustar,
+        M_sfc_loc, ustar, qz_sfc_avg_nd,
         txy, txz, tyz, qz,
         Cs2_1D_avg1, Cs2_1D_avg2,
         Cs2PrRatio_1D,
@@ -71,6 +71,8 @@ def ComputeStats(
         Wind speed at z = 0.5 * dz
     ustar : ndarray of shape (nx, ny)
         Friction velocity
+    qz_sfc_avg_nd : scalar
+        Non-dimensional surface sensible heat flux (qz = -u* x th*)
     txy, txz, tyz : ndarray
         SGS stress components
     qz : ndarray
@@ -119,6 +121,7 @@ def ComputeStats(
 
     # Surface terms
     M_sfc_avg = StatsDict["M_sfc"]; ustar_avg = StatsDict["ustar"]
+    qz_sfc_sum = StatsDict["qz_sfc"]
 
     # SGS terms
     txy_avg = StatsDict["txy"]; txz_avg = StatsDict["txz"]
@@ -142,7 +145,7 @@ def ComputeStats(
             "uTH": ZeRo1D, "vTH": ZeRo1D, "wTH": ZeRo1D,
             "txy": ZeRo1D, "txz": ZeRo1D, "tyz": ZeRo1D,
             "qz": ZeRo1D,
-            "M_sfc": 0.0, "ustar": 0.0,
+            "M_sfc": 0.0, "ustar": 0.0, "qz_sfc": 0.0,
             "Cs2_1": ZeRo1D, "Cs2_2": ZeRo1D,
             "Cs2PrRatio": ZeRo1D,
             "Beta1": ZeRo1D, "Beta2": ZeRo1D,
@@ -284,8 +287,11 @@ def ComputeStats(
         # ------------------------------------------------------------
         # Updated surface variables
         # ------------------------------------------------------------
-        new_M_sfc_avg = M_sfc_avg + mM_sfc
-        new_ustar_avg = ustar_avg + mustar
+        mq_sfc = qz_sfc_avg_nd * u_scale * TH_scale  # dimensional K m/s
+
+        new_M_sfc_avg  = M_sfc_avg + mM_sfc
+        new_ustar_avg  = ustar_avg + mustar
+        new_qz_sfc_sum = qz_sfc_sum + mq_sfc
 
         # ------------------------------------------------------------
         # Updated SGS coefficients
@@ -308,6 +314,7 @@ def ComputeStats(
             "txy": new_txy_avg, "txz": new_txz_avg, "tyz": new_tyz_avg,
             "qz": new_qz_avg,
             "M_sfc": new_M_sfc_avg, "ustar": new_ustar_avg,
+            "qz_sfc": new_qz_sfc_sum,
             "Cs2_1": new_Cs2_1_avg, "Cs2_2": new_Cs2_2_avg,
             "Cs2PrRatio": new_Cs2PrRatio_avg,
             "Beta1": new_Beta1_avg, "Beta2": new_Beta2_avg,
@@ -358,7 +365,7 @@ def InitializeStats(ZeRo1D):
         "qz": ZeRo1D,
 
         # Surface terms
-        "M_sfc": 0.0, "ustar": 0.0,
+        "M_sfc": 0.0, "ustar": 0.0, "qz_sfc": 0.0,
 
         # SGS coefficients
         "Cs2_1": ZeRo1D, "Cs2_2": ZeRo1D, "Cs2PrRatio": ZeRo1D,

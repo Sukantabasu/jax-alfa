@@ -67,4 +67,10 @@ if not os.path.isfile(_config_path):
 with open(_config_path) as _f:
     exec(_f.read())
 
+# Backward-compatible defaults for time-varying surface BC
+if 'optSurfBC' not in dir():
+    optSurfBC = 0
+if 'SurfaceBCFile' not in dir():
+    SurfaceBCFile = 'input/SurfaceBC.npz'
+
 del _rundir, _config_path, _f

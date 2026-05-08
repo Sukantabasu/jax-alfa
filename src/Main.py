@@ -89,6 +89,10 @@ MOSTfunctions = (psi2D_m, psi2D_m0,
                  psi2D_h, psi2D_h0,
                  fi2D_m, fi2D_h)
 
+# Load time-varying surface BC series once before the loop (optSurfBC >= 1)
+if optSurfBC >= 1:
+    SurfaceBC_series = Initialize_SurfaceBC()
+
 
 # ============================================================
 # Initialize statistics variables
@@ -126,13 +130,47 @@ for iteration in range(istep, nsteps+1, 1):
 
     # ------------------------------------------------------------
     #  Compute Surface Fluxes
+    #
+    #  All branches set:
+    #    M_sfc_loc   (nx, ny)  surface wind speed
+    #    ustar       (nx, ny)  friction velocity
+    #    qz_sfc_step (nx, ny)  surface heat flux field  (qz = -u* x th*)
+    #    qz_sfc_avg  scalar    planar-mean, non-dimensional
+    #    invOB       (nx, ny)  inverse Obukhov length
+    #    MOSTfunctions         updated stability functions
     # ------------------------------------------------------------
-    if optSurfFlux == 0:
-        (M_sfc_loc, ustar, qz_sfc_avg, invOB, MOSTfunctions) = (
-            SurfaceFlux_HomogeneousConstantFlux(u, v, TH, MOSTfunctions))
-    elif optSurfFlux == 1:
-        (M_sfc_loc, ustar, qz_sfc_avg, invOB, MOSTfunctions) = (
-            SurfaceFlux_HeterogeneousConstantFlux(u, v, TH, MOSTfunctions))
+
+    if optSurfBC == 0:
+        # Constant prescribed heat flux
+        if optSurfFlux == 0:
+            (M_sfc_loc, ustar, qz_sfc_avg, invOB, MOSTfunctions) = (
+                SurfaceFlux_HomogeneousConstantFlux(u, v, TH, MOSTfunctions))
+        else:
+            (M_sfc_loc, ustar, qz_sfc_avg, invOB, MOSTfunctions) = (
+                SurfaceFlux_HeterogeneousConstantFlux(u, v, TH, MOSTfunctions))
+        qz_sfc_step = qz_sfc  # global (nx,ny) array from DerivedVars
+
+    elif optSurfBC == 1:
+        # Time-varying prescribed heat flux
+        sfc_val = SurfaceBC_series[iteration - 1]
+        if optSurfFlux == 0:
+            (M_sfc_loc, ustar, qz_sfc_step, qz_sfc_avg, invOB, MOSTfunctions) = (
+                SurfaceFlux_HomogeneousVaryingFlux(u, v, TH, sfc_val, MOSTfunctions))
+        else:
+            (M_sfc_loc, ustar, qz_sfc_step, qz_sfc_avg, invOB, MOSTfunctions) = (
+                SurfaceFlux_HeterogeneousVaryingFlux(u, v, TH, sfc_val, MOSTfunctions))
+
+    else:
+        # optSurfBC == 2: time-varying prescribed surface temperature
+        sfc_val = SurfaceBC_series[iteration - 1]
+        if optSurfFlux == 0:
+            (M_sfc_loc, ustar, qz_sfc_step, qz_sfc_avg, invOB, MOSTfunctions) = (
+                SurfaceFlux_HomogeneousPrescribedTemperature(
+                    u, v, TH, sfc_val, MOSTfunctions))
+        else:
+            (M_sfc_loc, ustar, qz_sfc_step, qz_sfc_avg, invOB, MOSTfunctions) = (
+                SurfaceFlux_HeterogeneousPrescribedTemperature(
+                    u, v, TH, sfc_val, MOSTfunctions))
 
     # ------------------------------------------------------------
     #  Compute Velocity Gradients
@@ -151,7 +189,7 @@ for iteration in range(istep, nsteps+1, 1):
         potentialTemperatureGradients(
             TH, TH_fft,
             kx2, ky2,
-            ustar, qz_sfc, MOSTfunctions,
+            ustar, qz_sfc_step, MOSTfunctions,
             ZeRo3D))
 
     # ------------------------------------------------------------
@@ -203,7 +241,7 @@ for iteration in range(istep, nsteps+1, 1):
                 dynamicSGSmomentum[9:],
                 TH,
                 dTHdx, dTHdy, dTHdz,
-                qz_sfc,
+                qz_sfc_step,
                 ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft,
                 kx2, ky2))
 
@@ -230,7 +268,7 @@ for iteration in range(istep, nsteps+1, 1):
                 staticSGSmomentum[6:],
                 Cs2PrRatio_3D,
                 dTHdx, dTHdy, dTHdz,
-                qz_sfc,
+                qz_sfc_step,
                 ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft,
                 kx2, ky2))
 
@@ -318,7 +356,7 @@ for iteration in range(istep, nsteps+1, 1):
         ResetFlag = 0
         StatsDict = ComputeStats(u, v, w, TH,
                                  dudz, dvdz, dTHdz,
-                                 M_sfc_loc, ustar,
+                                 M_sfc_loc, ustar, qz_sfc_avg,
                                  txy, txz, tyz, qz,
                                  Cs2_1D_avg1, Cs2_1D_avg2,
                                  Cs2PrRatio_1D,
@@ -327,12 +365,25 @@ for iteration in range(istep, nsteps+1, 1):
                                  ZeRo3D)
         SampleCounter += 1
 
-        print(f"\n============= Finished Iteration {iteration} =============")
+        pct     = 100.0 * iteration / nsteps
+        elapsed = time.time() - tic_tot
+        rate    = elapsed / (iteration - istep + 1)   # seconds per iteration
+        eta     = rate * (nsteps - iteration)
+
+        def _fmt(s):
+            h, r = divmod(int(s), 3600)
+            m, sec = divmod(r, 60)
+            return f"{h:02d}:{m:02d}:{sec:02d}"
+
+        print(f"\n============= Finished Iteration {iteration} / {nsteps} "
+              f"({pct:.1f}%) =============")
+        print(f"  Elapsed: {_fmt(elapsed)}   ETA: {_fmt(eta)}")
         print(
             f"Statistics: collected sample {SampleCounter} at iteration {iteration}")
-        print(f"  Friction Velocity:    {jnp.sqrt(jnp.mean(ustar ** 2)):.2f} "
+        print(f"  Friction Velocity:    {jnp.sqrt(jnp.mean(ustar ** 2)):.4f} "
               f"m/s")
-        print(f"  Sensible Heat Flux:   {jnp.mean(qz_sfc):.2f} K m/s")
+        print(f"  Sensible Heat Flux:   "
+              f"{float(qz_sfc_avg * u_scale * TH_scale):.4f} K m/s")
         print(f"  Current CFL:          {CFL:.3f}")
         print(f"  CFLmax:               {CFLmax:.3f}")
         print(f"  CFLmax happened at iteration: {CFLmax_iteration}")
@@ -360,7 +411,7 @@ for iteration in range(istep, nsteps+1, 1):
         ResetFlag = 1
         StatsDict = ComputeStats(u, v, w, TH,
                                  dudz, dvdz, dTHdz,
-                                 M_sfc_loc, ustar,
+                                 M_sfc_loc, ustar, qz_sfc_avg,
                                  txy, txz, tyz, qz,
                                  Cs2_1D_avg1, Cs2_1D_avg2,
                                  Cs2PrRatio_1D,

@@ -48,6 +48,7 @@ from ..config import DerivedVars
 from ..initialization.Initialization import Initialize_uvw, Initialize_TH
 from ..initialization.Initialization import Initialize_GeoWind
 from ..initialization.Initialization import Initialize_RayleighDampingLayer
+from ..initialization.Initialization import Initialize_SurfaceBC
 from ..initialization.Preprocess import Wavenumber, Constant
 from ..initialization.Preprocess import ZeRo3DIni, ZeRo2DIni, ZeRo1DIni
 from ..initialization.Preprocess import ZeRo3D_padIni, ZeRo3D_fftIni, ZeRo3D_pad_fftIni
@@ -78,6 +79,10 @@ from ..subgridscale.DynamicSGS_ScalarLASDD import ScalarLASDD
 from ..surface.SurfaceFlux import MOSTstable, MOSTunstable
 from ..surface.SurfaceFlux import SurfaceFlux_HomogeneousConstantFlux
 from ..surface.SurfaceFlux import SurfaceFlux_HeterogeneousConstantFlux
+from ..surface.SurfaceFlux import SurfaceFlux_HomogeneousVaryingFlux
+from ..surface.SurfaceFlux import SurfaceFlux_HeterogeneousVaryingFlux
+from ..surface.SurfaceFlux import SurfaceFlux_HomogeneousPrescribedTemperature
+from ..surface.SurfaceFlux import SurfaceFlux_HeterogeneousPrescribedTemperature
 
 # Imports from pde
 from ..pde.NSE_AdvectionTerms import Advection

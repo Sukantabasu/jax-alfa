@@ -119,7 +119,7 @@ T_0 = 265.0
 # Subgrid-scale configuration
 # ------------------------------------------------------------
 
-# SGS model: 0 = Static, 1 = LAD, 2 = LASDD-SM, 3 = LASDD-WL
+# SGS model: 0 = Static, 2 = LASDD-SM, 3 = LASDD-WL
 optSgs = 2
 
 # Dynamic SGS update frequency (every N steps)
@@ -128,7 +128,7 @@ dynamicSGS_call_time = 1
 # Filter to grid ratio (FGR=1: implicit filtering with dealiasing)
 FGR = 2
 
-# Static SGS coefficients (used when optSgs=0 or in static fallback)
+# Static SGS coefficients (used for optSgs=0, or as cached values between dynamic updates)
 Cs2 = 0.1 ** 2
 Cs2PrRatio = Cs2 / 1.0
 

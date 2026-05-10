@@ -221,7 +221,7 @@ for iteration in range(istep, nsteps+1, 1):
     #  Compute SGS Terms
     # ------------------------------------------------------------
 
-    if iteration == istep or iteration % dynamicSGS_call_time == 0:
+    if optSgs >= 2 and (iteration == istep or iteration % dynamicSGS_call_time == 0):
 
         # print('Dynamic SGS')
 

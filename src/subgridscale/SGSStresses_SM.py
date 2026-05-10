@@ -48,8 +48,8 @@ from .StrainRates import StrainsUVPnodes_Dealias, StrainsWnodes_Dealias
 from .StrainRates import StrainsUVPnodes_NoDealias, StrainsWnodes_NoDealias
 
 # Import LASDD
-from .DynamicSGS_LASDD import LASDD
-from .DynamicSGS_ScalarLASDD import ScalarLASDD
+from .DynamicSGS_LASDD_SM import LASDD
+from .DynamicSGS_ScalarLASDD_SM import ScalarLASDD
 
 # Import helper functions
 from ..utilities.Utilities import StagGridAvg

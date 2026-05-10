@@ -43,15 +43,15 @@ from ..operations.Dealiasing import Dealias1
 from .StrainRates import StrainsUVPnodes_Dealias, StrainsWnodes_Dealias
 from .StrainRates import StrainsUVPnodes_NoDealias, StrainsWnodes_NoDealias
 
-# Import stress functions
-from .SGSStresses import StressesUVPnodes_Dealias, StressesWnodes_Dealias
-from .SGSStresses import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
+# Import stress functions (Smagorinsky)
+from .SGSStresses_SM import StressesUVPnodes_Dealias, StressesWnodes_Dealias
+from .SGSStresses_SM import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
 
-# Import scalar flux functions
-from .ScalarSGSFluxes import (ScalarFluxesUVPnodes_Dealias,
-                              ScalarFluxesWnodes_Dealias)
-from .ScalarSGSFluxes import (ScalarFluxesUVPnodes_NoDealias,
-                              ScalarFluxesWnodes_NoDealias)
+# Import scalar flux functions (Smagorinsky)
+from .ScalarSGSFluxes_SM import (ScalarFluxesUVPnodes_Dealias,
+                                 ScalarFluxesWnodes_Dealias)
+from .ScalarSGSFluxes_SM import (ScalarFluxesUVPnodes_NoDealias,
+                                 ScalarFluxesWnodes_NoDealias)
 
 
 # ============================================================

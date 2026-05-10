@@ -21,7 +21,9 @@ File: DynamicSGS_Main.py
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-29
-:Description: dynamic SGS modeling - main code
+:Description: dynamic SGS modeling - main code.
+              Dispatches between LASDD-SM (optSgs=2) and
+              LASDD-WL (optSgs=3) based on Config.
 """
 
 # ============================================================
@@ -43,17 +45,35 @@ from ..operations.Dealiasing import Dealias1
 from .StrainRates import StrainsUVPnodes_Dealias, StrainsWnodes_Dealias
 from .StrainRates import StrainsUVPnodes_NoDealias, StrainsWnodes_NoDealias
 
-# Import stress functions
-from .SGSStresses import StressesUVPnodes_Dealias, StressesWnodes_Dealias
-from .SGSStresses import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
+# Import LASDD models (SM and WL)
+from .DynamicSGS_LASDD_SM import LASDD as LASDD_SM
+from .DynamicSGS_LASDD_WL import LASDD as LASDD_WL
+from .DynamicSGS_ScalarLASDD_SM import ScalarLASDD as ScalarLASDD_SM
+from .DynamicSGS_ScalarLASDD_WL import ScalarLASDD as ScalarLASDD_WL
 
-# Import scalar flux functions
-from .ScalarSGSFluxes import ScalarFluxesUVPnodes_Dealias, ScalarFluxesWnodes_Dealias
-from .ScalarSGSFluxes import ScalarFluxesUVPnodes_NoDealias, ScalarFluxesWnodes_NoDealias
+# Import stress functions (SM and WL)
+from .SGSStresses_SM import (
+    StressesUVPnodes_Dealias   as StressesUVPnodes_Dealias_SM,
+    StressesUVPnodes_NoDealias as StressesUVPnodes_NoDealias_SM,
+    StressesWnodes_Dealias     as StressesWnodes_Dealias_SM,
+    StressesWnodes_NoDealias   as StressesWnodes_NoDealias_SM)
+from .SGSStresses_WL import (
+    StressesUVPnodes_Dealias   as StressesUVPnodes_Dealias_WL,
+    StressesUVPnodes_NoDealias as StressesUVPnodes_NoDealias_WL,
+    StressesWnodes_Dealias     as StressesWnodes_Dealias_WL,
+    StressesWnodes_NoDealias   as StressesWnodes_NoDealias_WL)
 
-# Import LASDD
-from .DynamicSGS_LASDD import LASDD
-from .DynamicSGS_ScalarLASDD import ScalarLASDD
+# Import scalar flux functions (SM and WL)
+from .ScalarSGSFluxes_SM import (
+    ScalarFluxesUVPnodes_Dealias   as ScalarFluxesUVPnodes_Dealias_SM,
+    ScalarFluxesUVPnodes_NoDealias as ScalarFluxesUVPnodes_NoDealias_SM,
+    ScalarFluxesWnodes_Dealias     as ScalarFluxesWnodes_Dealias_SM,
+    ScalarFluxesWnodes_NoDealias   as ScalarFluxesWnodes_NoDealias_SM)
+from .ScalarSGSFluxes_WL import (
+    ScalarFluxesUVPnodes_Dealias   as ScalarFluxesUVPnodes_Dealias_WL,
+    ScalarFluxesUVPnodes_NoDealias as ScalarFluxesUVPnodes_NoDealias_WL,
+    ScalarFluxesWnodes_Dealias     as ScalarFluxesWnodes_Dealias_WL,
+    ScalarFluxesWnodes_NoDealias   as ScalarFluxesWnodes_NoDealias_WL)
 
 
 # ============================================================
@@ -69,6 +89,7 @@ def DynamicSGS(
         ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft):
     """
     Computes all SGS stresses on proper grid nodes using the dynamic model.
+    Dispatches to LASDD-SM (optSgs=2) or LASDD-WL (optSgs=3).
 
     Parameters:
     -----------
@@ -92,9 +113,9 @@ def DynamicSGS(
     txx, tyy, tzz, txy, txz, tyz : ndarray of shape (nx, ny, nz)
         SGS stress components
     Cs2_1D_avg1, Cs2_1D_avg2 : ndarray of shape (nz)
-        1D profiles of Smagorinsky coefficient (two averaging methods)
+        1D profiles of SGS model coefficient (two averaging methods)
     beta1_1D : ndarray of shape (nz)
-        1D profile of beta parameter
+        1D profile of scale-dependence parameter beta1
     u_, v_, w_ : ndarray of shape (nx, ny, nz)
         Interpolated velocity components
     u_hat, v_hat, w_hat : ndarray of shape (nx, ny, nz)
@@ -130,35 +151,54 @@ def DynamicSGS(
                 ZeRo3D, ZeRo3D_pad_fft))
 
         # --------------------------------------
-        # Call the LASDD model
+        # Call LASDD and compute UVP stresses
         # --------------------------------------
-        (u_, v_, w_,
-         u_hat, v_hat, w_hat,
-         u_hatd, v_hatd, w_hatd,
-         S_uvp_hat, S_uvp_hatd,
-         Cs2_3D, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D) = (
-            LASDD(
-                u, v, w,
-                S11, S22, S33,
-                S12, S13, S23,
-                S_uvp,
-                ZeRo3D))
-        # --------------------------------------
+        if optSgs == 2:  # LASDD-SM
 
-        # --------------------------------------
-        # Dealias Cs2 field
-        # --------------------------------------
-        Cs2_3D_pad = Dealias1(FFT(Cs2_3D), ZeRo3D_pad_fft)
+            (u_, v_, w_,
+             u_hat, v_hat, w_hat,
+             u_hatd, v_hatd, w_hatd,
+             S_uvp_hat, S_uvp_hatd,
+             Cs2_3D, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D) = (
+                LASDD_SM(
+                    u, v, w,
+                    S11, S22, S33,
+                    S12, S13, S23,
+                    S_uvp,
+                    ZeRo3D))
 
-        # --------------------------------------
-        # Compute SGS stresses
-        # --------------------------------------
-        (txx, tyy, tzz, txy) = (
-            StressesUVPnodes_Dealias(
-                S11_pad, S22_pad, S33_pad, S12_pad,
-                S_uvp_pad,
-                Cs2_3D_pad,
-                ZeRo3D_fft))
+            Cs2_3D_pad = Dealias1(FFT(Cs2_3D), ZeRo3D_pad_fft)
+
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_Dealias_SM(
+                    S11_pad, S22_pad, S33_pad, S12_pad,
+                    S_uvp_pad,
+                    Cs2_3D_pad,
+                    ZeRo3D_fft))
+
+        elif optSgs == 3:  # LASDD-WL
+
+            (u_, v_, w_,
+             u_hat, v_hat, w_hat,
+             u_hatd, v_hatd, w_hatd,
+             S_uvp_hat, S_uvp_hatd,
+             Cs2_3D, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D) = (
+                LASDD_WL(
+                    u, v, w,
+                    S11, S22, S33,
+                    S12, S13, S23,
+                    ZeRo3D))
+
+            Cs2_3D_pad = Dealias1(FFT(Cs2_3D), ZeRo3D_pad_fft)
+
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_Dealias_WL(
+                    S11_pad, S22_pad, S33_pad, S12_pad,
+                    Cs2_3D_pad,
+                    ZeRo3D_fft))
+
+        else:
+            raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS")
 
     else:
 
@@ -174,42 +214,57 @@ def DynamicSGS(
                 dudz, dvdz, dwdz,
                 ZeRo3D))
 
-        # create a dummy variable for passing
         S_uvp_pad = S_uvp
 
         # --------------------------------------
-        # Call the LASDD model
+        # Call LASDD and compute UVP stresses
         # --------------------------------------
-        (u_, v_, w_,
-         u_hat, v_hat, w_hat,
-         u_hatd, v_hatd, w_hatd,
-         S_uvp_hat, S_uvp_hatd,
-         Cs2_3D, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D) = (
-            LASDD(
-                u, v, w,
-                S11, S22, S33,
-                S12, S13, S23,
-                S_uvp,
-                ZeRo3D))
-        # --------------------------------------
+        if optSgs == 2:  # LASDD-SM
 
-        # --------------------------------------
-        # Compute SGS stresses
-        # --------------------------------------
-        (txx, tyy, tzz, txy) = (
-            StressesUVPnodes_NoDealias(
-                S11, S22, S33, S12,
-                S_uvp,
-                Cs2_3D))
+            (u_, v_, w_,
+             u_hat, v_hat, w_hat,
+             u_hatd, v_hatd, w_hatd,
+             S_uvp_hat, S_uvp_hatd,
+             Cs2_3D, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D) = (
+                LASDD_SM(
+                    u, v, w,
+                    S11, S22, S33,
+                    S12, S13, S23,
+                    S_uvp,
+                    ZeRo3D))
+
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_NoDealias_SM(
+                    S11, S22, S33, S12,
+                    S_uvp,
+                    Cs2_3D))
+
+        elif optSgs == 3:  # LASDD-WL
+
+            (u_, v_, w_,
+             u_hat, v_hat, w_hat,
+             u_hatd, v_hatd, w_hatd,
+             S_uvp_hat, S_uvp_hatd,
+             Cs2_3D, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D) = (
+                LASDD_WL(
+                    u, v, w,
+                    S11, S22, S33,
+                    S12, S13, S23,
+                    ZeRo3D))
+
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_NoDealias_WL(
+                    S11, S22, S33, S12,
+                    Cs2_3D))
+
+        else:
+            raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS")
 
     # ------------------------------------------------------------
     # Compute txz and tyz components
     # ------------------------------------------------------------
     if optDealias == 1:
 
-        # --------------------------------------
-        # Compute strain rates
-        # --------------------------------------
         (S13_pad, S23_pad,
          S_w_pad) = (
             StrainsWnodes_Dealias(
@@ -218,25 +273,28 @@ def DynamicSGS(
                 dudz, dvdz, dwdz,
                 ZeRo3D, ZeRo3D_pad_fft))
 
-        # create a dummy variable for passing
         S_w = S_w_pad
 
-        # --------------------------------------
-        # Compute SGS stresses
-        # --------------------------------------
-        (txz, tyz) = (
-            StressesWnodes_Dealias(
-                S13_pad, S23_pad,
-                S_w_pad,
-                Cs2_3D_pad,
-                u, v, M_sfc_loc, psi2D_m, psi2D_m0,
-                ZeRo3D_fft))
+        if optSgs == 2:  # LASDD-SM
+            (txz, tyz) = (
+                StressesWnodes_Dealias_SM(
+                    S13_pad, S23_pad,
+                    S_w_pad,
+                    Cs2_3D_pad,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0,
+                    ZeRo3D_fft))
+        elif optSgs == 3:  # LASDD-WL
+            (txz, tyz) = (
+                StressesWnodes_Dealias_WL(
+                    S13_pad, S23_pad,
+                    Cs2_3D_pad,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0,
+                    ZeRo3D_fft))
+        else:
+            raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS")
 
     else:
 
-        # --------------------------------------
-        # Compute strain rates
-        # --------------------------------------
         (S13, S23,
          S_w) = (
             StrainsWnodes_NoDealias(
@@ -245,20 +303,24 @@ def DynamicSGS(
                 dudz, dvdz, dwdz,
                 ZeRo3D))
 
-        # create a dummy variable for passing
         S_w_pad = S_w
 
-        # --------------------------------------
-        # Compute SGS stresses
-        # --------------------------------------
-        (txz, tyz) = (
-            StressesWnodes_NoDealias(
-                S13, S23,
-                S_w,
-                Cs2_3D,
-                u, v, M_sfc_loc, psi2D_m, psi2D_m0))
+        if optSgs == 2:  # LASDD-SM
+            (txz, tyz) = (
+                StressesWnodes_NoDealias_SM(
+                    S13, S23,
+                    S_w,
+                    Cs2_3D,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0))
+        elif optSgs == 3:  # LASDD-WL
+            (txz, tyz) = (
+                StressesWnodes_NoDealias_WL(
+                    S13, S23,
+                    Cs2_3D,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0))
+        else:
+            raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS")
 
-    # Return stresses along with strain rates for scalar calculations
     return (txx, tyy, tzz, txy, txz, tyz,
             Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D,
             u_, v_, w_,
@@ -314,23 +376,35 @@ def DynamicSGSscalar(
     qx, qy, qz : ndarray of shape (nx, ny, nz)
         SGS scalar flux components
     Cs2PrRatio_1D : ndarray of shape (nz)
-        1D profile of Cs²/Pr ratio
+        1D profile of SGS coefficient / Pr_t
     beta2_1D : ndarray of shape (nz)
-        1D profile of filter width ratio for scalar model
+        1D profile of scalar scale-dependence parameter beta2
     """
 
     # ------------------------------------------------------------
-    # Compute scalar SGS model coefficients
+    # Compute scalar SGS model coefficient
     # ------------------------------------------------------------
-    (Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D) = (
-        ScalarLASDD(
-            u_, v_, w_,
-            u_hat, v_hat, w_hat,
-            u_hatd, v_hatd, w_hatd,
-            TH,
-            dTHdx, dTHdy, dTHdz,
-            S_uvp, S_uvp_hat, S_uvp_hatd,
-            ZeRo3D))
+    if optSgs == 2:  # LASDD-SM
+        (Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D) = (
+            ScalarLASDD_SM(
+                u_, v_, w_,
+                u_hat, v_hat, w_hat,
+                u_hatd, v_hatd, w_hatd,
+                TH,
+                dTHdx, dTHdy, dTHdz,
+                S_uvp, S_uvp_hat, S_uvp_hatd,
+                ZeRo3D))
+    elif optSgs == 3:  # LASDD-WL
+        (Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D) = (
+            ScalarLASDD_WL(
+                u_, v_, w_,
+                u_hat, v_hat, w_hat,
+                u_hatd, v_hatd, w_hatd,
+                TH,
+                dTHdx, dTHdy, dTHdz,
+                ZeRo3D))
+    else:
+        raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS scalar")
 
     # ------------------------------------------------------------
     # Compute qx, qy and qz components
@@ -343,39 +417,61 @@ def DynamicSGSscalar(
 
         Cs2PrRatio_3D_pad = Dealias1(FFT(Cs2PrRatio_3D), ZeRo3D_pad_fft)
 
-        # Compute fluxes on UVP nodes
-        (qx, qy) = (
-            ScalarFluxesUVPnodes_Dealias(
-                dTHdx_pad, dTHdy_pad,
-                S_uvp_pad,
-                Cs2PrRatio_3D_pad,
-                ZeRo3D_fft))
-
-        # Compute flux on W nodes
-        qz = (
-            ScalarFluxesWnodes_Dealias(
-                dTHdz_pad,
-                S_w_pad,
-                Cs2PrRatio_3D_pad,
-                qz_sfc,
-                ZeRo3D_fft))
+        if optSgs == 2:  # LASDD-SM
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_Dealias_SM(
+                    dTHdx_pad, dTHdy_pad,
+                    S_uvp_pad,
+                    Cs2PrRatio_3D_pad,
+                    ZeRo3D_fft))
+            qz = (
+                ScalarFluxesWnodes_Dealias_SM(
+                    dTHdz_pad,
+                    S_w_pad,
+                    Cs2PrRatio_3D_pad,
+                    qz_sfc,
+                    ZeRo3D_fft))
+        elif optSgs == 3:  # LASDD-WL
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_Dealias_WL(
+                    dTHdx_pad, dTHdy_pad,
+                    Cs2PrRatio_3D_pad,
+                    ZeRo3D_fft))
+            qz = (
+                ScalarFluxesWnodes_Dealias_WL(
+                    dTHdz_pad,
+                    Cs2PrRatio_3D_pad,
+                    qz_sfc,
+                    ZeRo3D_fft))
+        else:
+            raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS scalar")
 
     else:
 
-        # Compute fluxes at UVP nodes
-        (qx, qy) = (
-            ScalarFluxesUVPnodes_NoDealias(
-                dTHdx, dTHdy,
-                S_uvp,
-                Cs2PrRatio_3D))
-
-        # Compute flux at W nodes
-        qz = (
-            ScalarFluxesWnodes_NoDealias(
-                dTHdz,
-                S_w,
-                Cs2PrRatio_3D,
-                qz_sfc))
+        if optSgs == 2:  # LASDD-SM
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_NoDealias_SM(
+                    dTHdx, dTHdy,
+                    S_uvp,
+                    Cs2PrRatio_3D))
+            qz = (
+                ScalarFluxesWnodes_NoDealias_SM(
+                    dTHdz,
+                    S_w,
+                    Cs2PrRatio_3D,
+                    qz_sfc))
+        elif optSgs == 3:  # LASDD-WL
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_NoDealias_WL(
+                    dTHdx, dTHdy,
+                    Cs2PrRatio_3D))
+            qz = (
+                ScalarFluxesWnodes_NoDealias_WL(
+                    dTHdz,
+                    Cs2PrRatio_3D,
+                    qz_sfc))
+        else:
+            raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS scalar")
 
     return (qx, qy, qz,
             Cs2PrRatio_1D, beta2_1D)

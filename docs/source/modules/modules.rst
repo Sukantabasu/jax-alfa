@@ -21,12 +21,16 @@ API Reference
    SCL_SGSTerms
    SCL_TimeAdvancement
    StrainRates
-   SGSStresses
-   ScalarSGSFluxes
+   SGSStresses_SM
+   SGSStresses_WL
+   ScalarSGSFluxes_SM
+   ScalarSGSFluxes_WL
    StaticSGS_Main
    DynamicSGS_Main
-   DynamicSGS_LASDD
-   DynamicSGS_ScalarLASDD
+   DynamicSGS_LASDD_SM
+   DynamicSGS_LASDD_WL
+   DynamicSGS_ScalarLASDD_SM
+   DynamicSGS_ScalarLASDD_WL
    SurfaceFlux
    FFT
    Derivatives

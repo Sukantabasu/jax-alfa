@@ -68,12 +68,14 @@ from ..utilities.Statistics import ComputeStats, InitializeStats
 # Imports from subgridscale
 from ..subgridscale.StrainRates import StrainsUVPnodes_Dealias, StrainsWnodes_Dealias
 from ..subgridscale.StrainRates import StrainsUVPnodes_NoDealias, StrainsWnodes_NoDealias
-from ..subgridscale.SGSStresses import StressesUVPnodes_Dealias, StressesWnodes_Dealias
-from ..subgridscale.SGSStresses import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
-from ..subgridscale.SGSStresses import Wall
+from ..subgridscale.SGSStresses_SM import StressesUVPnodes_Dealias, StressesWnodes_Dealias
+from ..subgridscale.SGSStresses_SM import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
+from ..subgridscale.SGSStresses_SM import Wall
 from ..subgridscale.DynamicSGS_Main import DynamicSGS, DynamicSGSscalar
-from ..subgridscale.DynamicSGS_LASDD import LASDD
-from ..subgridscale.DynamicSGS_ScalarLASDD import ScalarLASDD
+from ..subgridscale.DynamicSGS_LASDD_SM import LASDD as LASDD_SM
+from ..subgridscale.DynamicSGS_LASDD_WL import LASDD as LASDD_WL
+from ..subgridscale.DynamicSGS_ScalarLASDD_SM import ScalarLASDD as ScalarLASDD_SM
+from ..subgridscale.DynamicSGS_ScalarLASDD_WL import ScalarLASDD as ScalarLASDD_WL
 
 # Imports from surface
 from ..surface.SurfaceFlux import MOSTstable, MOSTunstable

@@ -1,7 +1,7 @@
 License
 =======
 
-JAXLES is licensed under the GNU General Public License version 3 (GPL-3.0)
+JAX-ALFA is licensed under the GNU General Public License version 3 (GPL-3.0)
 
 .. code-block:: text
 

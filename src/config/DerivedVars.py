@@ -88,9 +88,13 @@ else:
     TFR = np.sqrt(2)
     optDealias = 0  # 0: no dealias, 1: dealias
 
-# Initialize Cs2 and Cs2PrRatio for static SGS models
-Cs2_3D = Cs2 * jnp.ones((nx, ny, nz))
-Cs2PrRatio_3D = Cs2PrRatio * jnp.ones((nx, ny, nz))
+# Initial 3D fields for dynamic SGS coefficients
+if optSgs in [2, 4]:  # WL models: use Cwl / CwlPrRatio
+    Cs2_3D = Cwl * jnp.ones((nx, ny, nz))
+    Cs2PrRatio_3D = CwlPrRatio * jnp.ones((nx, ny, nz))
+else:  # SM models: use Cs2 / Cs2PrRatio
+    Cs2_3D = Cs2 * jnp.ones((nx, ny, nz))
+    Cs2PrRatio_3D = Cs2PrRatio * jnp.ones((nx, ny, nz))
 
 # Non-dimensional damping height
 z_damping_nondim = z_damping / z_scale

@@ -22,8 +22,9 @@ File: DynamicSGS_Main.py
                 code restructuring, and performance optimization
 :Date: 2025-4-29
 :Description: dynamic SGS modeling - main code.
-              Dispatches between LASDD-SM (optSgs=2) and
-              LASDD-WL (optSgs=3) based on Config.
+              Dispatches between SM (optSgs=1,3) and WL (optSgs=2,4) based on Config.
+              optSgs=1: LASDD-SM, optSgs=2: LASDD-WL,
+              optSgs=3: LAD-SM, optSgs=4: LAD-WL
 """
 
 # ============================================================
@@ -89,7 +90,7 @@ def DynamicSGS(
         ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft):
     """
     Computes all SGS stresses on proper grid nodes using the dynamic model.
-    Dispatches to LASDD-SM (optSgs=2) or LASDD-WL (optSgs=3).
+    Dispatches to SM variants (optSgs=1,3) or WL variants (optSgs=2,4).
 
     Parameters:
     -----------
@@ -153,7 +154,7 @@ def DynamicSGS(
         # --------------------------------------
         # Call LASDD and compute UVP stresses
         # --------------------------------------
-        if optSgs == 2:  # LASDD-SM
+        if optSgs in [1, 3]:  # SM variants
 
             (u_, v_, w_,
              u_hat, v_hat, w_hat,
@@ -176,7 +177,7 @@ def DynamicSGS(
                     Cs2_3D_pad,
                     ZeRo3D_fft))
 
-        elif optSgs == 3:  # LASDD-WL
+        elif optSgs in [2, 4]:  # WL variants
 
             (u_, v_, w_,
              u_hat, v_hat, w_hat,
@@ -219,7 +220,7 @@ def DynamicSGS(
         # --------------------------------------
         # Call LASDD and compute UVP stresses
         # --------------------------------------
-        if optSgs == 2:  # LASDD-SM
+        if optSgs in [1, 3]:  # SM variants
 
             (u_, v_, w_,
              u_hat, v_hat, w_hat,
@@ -239,7 +240,7 @@ def DynamicSGS(
                     S_uvp,
                     Cs2_3D))
 
-        elif optSgs == 3:  # LASDD-WL
+        elif optSgs in [2, 4]:  # WL variants
 
             (u_, v_, w_,
              u_hat, v_hat, w_hat,
@@ -275,7 +276,7 @@ def DynamicSGS(
 
         S_w = S_w_pad
 
-        if optSgs == 2:  # LASDD-SM
+        if optSgs in [1, 3]:  # SM variants
             (txz, tyz) = (
                 StressesWnodes_Dealias_SM(
                     S13_pad, S23_pad,
@@ -283,7 +284,7 @@ def DynamicSGS(
                     Cs2_3D_pad,
                     u, v, M_sfc_loc, psi2D_m, psi2D_m0,
                     ZeRo3D_fft))
-        elif optSgs == 3:  # LASDD-WL
+        elif optSgs in [2, 4]:  # WL variants
             (txz, tyz) = (
                 StressesWnodes_Dealias_WL(
                     S13_pad, S23_pad,
@@ -305,14 +306,14 @@ def DynamicSGS(
 
         S_w_pad = S_w
 
-        if optSgs == 2:  # LASDD-SM
+        if optSgs in [1, 3]:  # SM variants
             (txz, tyz) = (
                 StressesWnodes_NoDealias_SM(
                     S13, S23,
                     S_w,
                     Cs2_3D,
                     u, v, M_sfc_loc, psi2D_m, psi2D_m0))
-        elif optSgs == 3:  # LASDD-WL
+        elif optSgs in [2, 4]:  # WL variants
             (txz, tyz) = (
                 StressesWnodes_NoDealias_WL(
                     S13, S23,
@@ -323,6 +324,7 @@ def DynamicSGS(
 
     return (txx, tyy, tzz, txy, txz, tyz,
             Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D,
+            Cs2_3D,
             u_, v_, w_,
             u_hat, v_hat, w_hat,
             u_hatd, v_hatd, w_hatd,
@@ -384,7 +386,7 @@ def DynamicSGSscalar(
     # ------------------------------------------------------------
     # Compute scalar SGS model coefficient
     # ------------------------------------------------------------
-    if optSgs == 2:  # LASDD-SM
+    if optSgs in [1, 3]:  # SM variants
         (Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D) = (
             ScalarLASDD_SM(
                 u_, v_, w_,
@@ -394,7 +396,7 @@ def DynamicSGSscalar(
                 dTHdx, dTHdy, dTHdz,
                 S_uvp, S_uvp_hat, S_uvp_hatd,
                 ZeRo3D))
-    elif optSgs == 3:  # LASDD-WL
+    elif optSgs in [2, 4]:  # WL variants
         (Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D) = (
             ScalarLASDD_WL(
                 u_, v_, w_,
@@ -417,7 +419,7 @@ def DynamicSGSscalar(
 
         Cs2PrRatio_3D_pad = Dealias1(FFT(Cs2PrRatio_3D), ZeRo3D_pad_fft)
 
-        if optSgs == 2:  # LASDD-SM
+        if optSgs in [1, 3]:  # SM variants
             (qx, qy) = (
                 ScalarFluxesUVPnodes_Dealias_SM(
                     dTHdx_pad, dTHdy_pad,
@@ -431,7 +433,7 @@ def DynamicSGSscalar(
                     Cs2PrRatio_3D_pad,
                     qz_sfc,
                     ZeRo3D_fft))
-        elif optSgs == 3:  # LASDD-WL
+        elif optSgs in [2, 4]:  # WL variants
             (qx, qy) = (
                 ScalarFluxesUVPnodes_Dealias_WL(
                     dTHdx_pad, dTHdy_pad,
@@ -448,7 +450,7 @@ def DynamicSGSscalar(
 
     else:
 
-        if optSgs == 2:  # LASDD-SM
+        if optSgs in [1, 3]:  # SM variants
             (qx, qy) = (
                 ScalarFluxesUVPnodes_NoDealias_SM(
                     dTHdx, dTHdy,
@@ -460,7 +462,7 @@ def DynamicSGSscalar(
                     S_w,
                     Cs2PrRatio_3D,
                     qz_sfc))
-        elif optSgs == 3:  # LASDD-WL
+        elif optSgs in [2, 4]:  # WL variants
             (qx, qy) = (
                 ScalarFluxesUVPnodes_NoDealias_WL(
                     dTHdx, dTHdy,
@@ -474,4 +476,5 @@ def DynamicSGSscalar(
             raise ValueError(f"Unsupported optSgs={optSgs} for dynamic SGS scalar")
 
     return (qx, qy, qz,
+            Cs2PrRatio_3D,
             Cs2PrRatio_1D, beta2_1D)

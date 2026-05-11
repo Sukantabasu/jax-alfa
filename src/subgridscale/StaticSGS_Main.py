@@ -43,15 +43,29 @@ from ..operations.Dealiasing import Dealias1
 from .StrainRates import StrainsUVPnodes_Dealias, StrainsWnodes_Dealias
 from .StrainRates import StrainsUVPnodes_NoDealias, StrainsWnodes_NoDealias
 
-# Import stress functions (Smagorinsky)
-from .SGSStresses_SM import StressesUVPnodes_Dealias, StressesWnodes_Dealias
-from .SGSStresses_SM import StressesUVPnodes_NoDealias, StressesWnodes_NoDealias
+# Import stress functions (SM and WL)
+from .SGSStresses_SM import (
+    StressesUVPnodes_Dealias   as StressesUVPnodes_Dealias_SM,
+    StressesUVPnodes_NoDealias as StressesUVPnodes_NoDealias_SM,
+    StressesWnodes_Dealias     as StressesWnodes_Dealias_SM,
+    StressesWnodes_NoDealias   as StressesWnodes_NoDealias_SM)
+from .SGSStresses_WL import (
+    StressesUVPnodes_Dealias   as StressesUVPnodes_Dealias_WL,
+    StressesUVPnodes_NoDealias as StressesUVPnodes_NoDealias_WL,
+    StressesWnodes_Dealias     as StressesWnodes_Dealias_WL,
+    StressesWnodes_NoDealias   as StressesWnodes_NoDealias_WL)
 
-# Import scalar flux functions (Smagorinsky)
-from .ScalarSGSFluxes_SM import (ScalarFluxesUVPnodes_Dealias,
-                                 ScalarFluxesWnodes_Dealias)
-from .ScalarSGSFluxes_SM import (ScalarFluxesUVPnodes_NoDealias,
-                                 ScalarFluxesWnodes_NoDealias)
+# Import scalar flux functions (SM and WL)
+from .ScalarSGSFluxes_SM import (
+    ScalarFluxesUVPnodes_Dealias   as ScalarFluxesUVPnodes_Dealias_SM,
+    ScalarFluxesUVPnodes_NoDealias as ScalarFluxesUVPnodes_NoDealias_SM,
+    ScalarFluxesWnodes_Dealias     as ScalarFluxesWnodes_Dealias_SM,
+    ScalarFluxesWnodes_NoDealias   as ScalarFluxesWnodes_NoDealias_SM)
+from .ScalarSGSFluxes_WL import (
+    ScalarFluxesUVPnodes_Dealias   as ScalarFluxesUVPnodes_Dealias_WL,
+    ScalarFluxesUVPnodes_NoDealias as ScalarFluxesUVPnodes_NoDealias_WL,
+    ScalarFluxesWnodes_Dealias     as ScalarFluxesWnodes_Dealias_WL,
+    ScalarFluxesWnodes_NoDealias   as ScalarFluxesWnodes_NoDealias_WL)
 
 
 # ============================================================
@@ -116,12 +130,19 @@ def StaticSGS(
         # --------------------------------------
         # Compute SGS stresses
         # --------------------------------------
-        (txx, tyy, tzz, txy) = (
-            StressesUVPnodes_Dealias(
-                S11_pad, S22_pad, S33_pad, S12_pad,
-                S_uvp_pad,
-                Cs2_3D_pad,
-                ZeRo3D_fft))
+        if optSgs in [2, 4]:  # WL variants
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_Dealias_WL(
+                    S11_pad, S22_pad, S33_pad, S12_pad,
+                    Cs2_3D_pad,
+                    ZeRo3D_fft))
+        else:  # SM variants (optSgs in [0, 1, 3])
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_Dealias_SM(
+                    S11_pad, S22_pad, S33_pad, S12_pad,
+                    S_uvp_pad,
+                    Cs2_3D_pad,
+                    ZeRo3D_fft))
 
     else:
 
@@ -143,11 +164,17 @@ def StaticSGS(
         # --------------------------------------
         # Compute SGS stresses
         # --------------------------------------
-        (txx, tyy, tzz, txy) = (
-            StressesUVPnodes_NoDealias(
-                S11, S22, S33, S12,
-                S_uvp,
-                Cs2_3D))
+        if optSgs in [2, 4]:  # WL variants
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_NoDealias_WL(
+                    S11, S22, S33, S12,
+                    Cs2_3D))
+        else:  # SM variants (optSgs in [0, 1, 3])
+            (txx, tyy, tzz, txy) = (
+                StressesUVPnodes_NoDealias_SM(
+                    S11, S22, S33, S12,
+                    S_uvp,
+                    Cs2_3D))
 
     # ------------------------------------------------------------
     # Compute txz, tyz components
@@ -171,13 +198,21 @@ def StaticSGS(
         # --------------------------------------
         # Compute SGS stresses
         # --------------------------------------
-        (txz, tyz) = (
-            StressesWnodes_Dealias(
-                S13_pad, S23_pad,
-                S_w_pad,
-                Cs2_3D_pad,
-                u, v, M_sfc_loc, psi2D_m, psi2D_m0,
-                ZeRo3D_fft))
+        if optSgs in [2, 4]:  # WL variants
+            (txz, tyz) = (
+                StressesWnodes_Dealias_WL(
+                    S13_pad, S23_pad,
+                    Cs2_3D_pad,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0,
+                    ZeRo3D_fft))
+        else:  # SM variants (optSgs in [0, 1, 3])
+            (txz, tyz) = (
+                StressesWnodes_Dealias_SM(
+                    S13_pad, S23_pad,
+                    S_w_pad,
+                    Cs2_3D_pad,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0,
+                    ZeRo3D_fft))
 
     else:
 
@@ -198,12 +233,19 @@ def StaticSGS(
         # --------------------------------------
         # Compute SGS stresses
         # --------------------------------------
-        (txz, tyz) = (
-            StressesWnodes_NoDealias(
-                S13, S23,
-                S_w,
-                Cs2_3D,
-                u, v, M_sfc_loc, psi2D_m, psi2D_m0))
+        if optSgs in [2, 4]:  # WL variants
+            (txz, tyz) = (
+                StressesWnodes_NoDealias_WL(
+                    S13, S23,
+                    Cs2_3D,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0))
+        else:  # SM variants (optSgs in [0, 1, 3])
+            (txz, tyz) = (
+                StressesWnodes_NoDealias_SM(
+                    S13, S23,
+                    S_w,
+                    Cs2_3D,
+                    u, v, M_sfc_loc, psi2D_m, psi2D_m0))
 
     # Return stresses along with strain rates for scalar calculations
     return (txx, tyy, tzz, txy, txz, tyz,
@@ -257,37 +299,65 @@ def StaticSGSscalar(
         Cs2PrRatio_3D_pad = Dealias1(FFT(Cs2PrRatio_3D), ZeRo3D_pad_fft)
 
         # Compute fluxes at UVP nodes
-        (qx, qy) = (
-            ScalarFluxesUVPnodes_Dealias(
-                dTHdx_pad, dTHdy_pad,
-                S_uvp_pad,
-                Cs2PrRatio_3D_pad,
-                ZeRo3D_fft))
+        if optSgs in [2, 4]:  # WL variants
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_Dealias_WL(
+                    dTHdx_pad, dTHdy_pad,
+                    Cs2PrRatio_3D_pad,
+                    ZeRo3D_fft))
+        else:  # SM variants
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_Dealias_SM(
+                    dTHdx_pad, dTHdy_pad,
+                    S_uvp_pad,
+                    Cs2PrRatio_3D_pad,
+                    ZeRo3D_fft))
 
         # Compute flux on W nodes
-        qz = (
-            ScalarFluxesWnodes_Dealias(
-                dTHdz_pad,
-                S_w_pad,
-                Cs2PrRatio_3D_pad,
-                qz_sfc,
-                ZeRo3D_fft))
+        if optSgs in [2, 4]:  # WL variants
+            qz = (
+                ScalarFluxesWnodes_Dealias_WL(
+                    dTHdz_pad,
+                    Cs2PrRatio_3D_pad,
+                    qz_sfc,
+                    ZeRo3D_fft))
+        else:  # SM variants
+            qz = (
+                ScalarFluxesWnodes_Dealias_SM(
+                    dTHdz_pad,
+                    S_w_pad,
+                    Cs2PrRatio_3D_pad,
+                    qz_sfc,
+                    ZeRo3D_fft))
 
     else:
 
         # Compute fluxes at UVP nodes
-        (qx, qy) = (
-            ScalarFluxesUVPnodes_NoDealias(
-                dTHdx, dTHdy,
-                S_uvp,
-                Cs2PrRatio_3D))
+        if optSgs in [2, 4]:  # WL variants
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_NoDealias_WL(
+                    dTHdx, dTHdy,
+                    Cs2PrRatio_3D))
+        else:  # SM variants
+            (qx, qy) = (
+                ScalarFluxesUVPnodes_NoDealias_SM(
+                    dTHdx, dTHdy,
+                    S_uvp,
+                    Cs2PrRatio_3D))
 
         # Compute flux on W nodes
-        qz = (
-            ScalarFluxesWnodes_NoDealias(
-                dTHdz,
-                S_w,
-                Cs2PrRatio_3D,
-                qz_sfc))
+        if optSgs in [2, 4]:  # WL variants
+            qz = (
+                ScalarFluxesWnodes_NoDealias_WL(
+                    dTHdz,
+                    Cs2PrRatio_3D,
+                    qz_sfc))
+        else:  # SM variants
+            qz = (
+                ScalarFluxesWnodes_NoDealias_SM(
+                    dTHdz,
+                    S_w,
+                    Cs2PrRatio_3D,
+                    qz_sfc))
 
     return qx, qy, qz

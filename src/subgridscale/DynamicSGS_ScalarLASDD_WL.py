@@ -239,7 +239,11 @@ def ScalarLASDD(
     ee = a2 * a5 - a6 * a10           # A4
     ff = -a7 * a10                    # A5
 
-    beta2_1D = ComputeBeta2(ff, ee, dd, cc, bb, aa)
+    computeBeta = optSgs in [1, 2]
+    if computeBeta:
+        beta2_1D = ComputeBeta2(ff, ee, dd, cc, bb, aa)
+    else:
+        beta2_1D = jnp.ones(nz)
     beta2_3D = jnp.broadcast_to(beta2_1D.reshape(1, 1, nz), (nx, ny, nz))
 
     # ----------------------------------------------------------

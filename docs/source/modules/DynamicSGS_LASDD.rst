@@ -1,15 +1,10 @@
-SGS Model: LASDD (Momentum)
-===========================
+:orphan:
 
-.. automodule:: src.subgridscale.DynamicSGS_LASDD
-   :members:
-   :undoc-members:
-   :show-inheritance:
+SGS Model: LASDD (Momentum) — Reorganized
+==========================================
 
-Source Code: DynamicSGS_LASDD
------------------------------
+This page has been superseded. The LASDD momentum SGS module has been
+split into separate SM and WL implementations:
 
-.. literalinclude:: ../../../src/subgridscale/DynamicSGS_LASDD.py
-   :language: python
-   :linenos:
-   :caption: DynamicSGS_LASDD.py
+* :doc:`DynamicSGS_LASDD_SM` — Smagorinsky base model (``optSgs = 1, 3``)
+* :doc:`DynamicSGS_LASDD_WL` — Wong-Lilly base model (``optSgs = 2, 4``)

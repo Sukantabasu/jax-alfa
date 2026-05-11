@@ -1,15 +1,10 @@
-SGS Model: LASDD (Scalar)
-=========================
+:orphan:
 
-.. automodule:: src.subgridscale.DynamicSGS_ScalarLASDD
-   :members:
-   :undoc-members:
-   :show-inheritance:
+SGS Model: LASDD (Scalar) — Reorganized
+=========================================
 
-Source Code: DynamicSGS_ScalarLASDD
------------------------------------
+This page has been superseded. The LASDD scalar SGS module has been
+split into separate SM and WL implementations:
 
-.. literalinclude:: ../../../src/subgridscale/DynamicSGS_ScalarLASDD.py
-   :language: python
-   :linenos:
-   :caption: DynamicSGS_ScalarLASDD.py
+* :doc:`DynamicSGS_ScalarLASDD_SM` — Smagorinsky base model (``optSgs = 1, 3``)
+* :doc:`DynamicSGS_ScalarLASDD_WL` — Wong-Lilly base model (``optSgs = 2, 4``)

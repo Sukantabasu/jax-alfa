@@ -139,6 +139,7 @@ def DivFluxDynamicSGS(
      S_uvp_hat, S_uvp_hatd) = dynamicSGSmomentum
 
     (qx, qy, qz,
+     Cs2PrRatio_3D,
      Cs2PrRatio_1D, beta2_1D) = (
         DynamicSGSscalar(
             u_, v_, w_,
@@ -157,7 +158,7 @@ def DivFluxDynamicSGS(
                    ZeRo3D,
                    kx2, ky2)
 
-    return qz, divq, Cs2PrRatio_1D, beta2_1D
+    return qz, divq, Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D
 
 
 # ======================================================

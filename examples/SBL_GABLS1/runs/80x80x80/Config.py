@@ -119,8 +119,8 @@ T_0 = 265.0
 # Subgrid-scale configuration
 # ------------------------------------------------------------
 
-# SGS model: 0 = Static, 2 = LASDD-SM, 3 = LASDD-WL
-optSgs = 2
+# SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
+optSgs = 1
 
 # Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1
@@ -128,9 +128,11 @@ dynamicSGS_call_time = 1
 # Filter to grid ratio (FGR=1: implicit filtering with dealiasing)
 FGR = 2
 
-# Static SGS coefficients (used for optSgs=0, or as cached values between dynamic updates)
-Cs2 = 0.1 ** 2
+# Initial SGS coefficients (used before first dynamic update when dynamicSGS_call_time > 1)
+Cs2 = 0.1 ** 2        # SM models: initial Cs^2
+Cwl = 0.1 ** 2        # WL models: initial C_WL
 Cs2PrRatio = Cs2 / 1.0
+CwlPrRatio = Cwl / 1.0
 
 # ------------------------------------------------------------
 # Damping layer configuration

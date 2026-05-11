@@ -221,12 +221,13 @@ for iteration in range(istep, nsteps+1, 1):
     #  Compute SGS Terms
     # ------------------------------------------------------------
 
-    if optSgs >= 2 and (iteration == istep or iteration % dynamicSGS_call_time == 0):
+    if optSgs >= 1 and (iteration == istep or iteration % dynamicSGS_call_time == 0):
 
         # print('Dynamic SGS')
 
         (divtx, divty, divtz,
          Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D,
+         Cs2_3D,
          dynamicSGSmomentum) = (
             DivStressDynamicSGS(
                 dudx, dvdx, dwdx,
@@ -236,9 +237,9 @@ for iteration in range(istep, nsteps+1, 1):
                 ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft,
                 kx2, ky2))
 
-        (qz, divq, Cs2PrRatio_1D, beta2_1D) = (
+        (qz, divq, Cs2PrRatio_3D, Cs2PrRatio_1D, beta2_1D) = (
             DivFluxDynamicSGS(
-                dynamicSGSmomentum[9:],
+                dynamicSGSmomentum[10:],
                 TH,
                 dTHdx, dTHdy, dTHdz,
                 qz_sfc_step,

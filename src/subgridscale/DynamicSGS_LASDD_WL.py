@@ -274,7 +274,11 @@ def LASDD(
     ee = a2 * a5 - a6 * a10           # A4 (beta^4)
     ff = -a7 * a10                    # A5 (beta^5)
 
-    beta1_1D = ComputeBeta1(ff, ee, dd, cc, bb, aa)
+    computeBeta = optSgs in [1, 2]
+    if computeBeta:
+        beta1_1D = ComputeBeta1(ff, ee, dd, cc, bb, aa)
+    else:
+        beta1_1D = jnp.ones(nz)
     beta1_3D = jnp.broadcast_to(beta1_1D.reshape(1, 1, nz), (nx, ny, nz))
 
     # ----------------------------------------------------------

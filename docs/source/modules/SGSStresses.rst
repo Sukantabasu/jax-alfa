@@ -1,15 +1,10 @@
-SGS Stress Computations
-=======================
+:orphan:
 
-.. automodule:: src.subgridscale.SGSStresses
-   :members:
-   :undoc-members:
-   :show-inheritance:
+SGS Stress Computations — Reorganized
+======================================
 
-Source Code: SGSStresses
-------------------------
+This page has been superseded. SGS stress computations have been split
+into separate SM and WL implementations:
 
-.. literalinclude:: ../../../src/subgridscale/SGSStresses.py
-   :language: python
-   :linenos:
-   :caption: SGSStresses.py
+* :doc:`SGSStresses_SM` — Smagorinsky base model
+* :doc:`SGSStresses_WL` — Wong-Lilly base model

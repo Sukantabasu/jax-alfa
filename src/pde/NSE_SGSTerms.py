@@ -165,6 +165,7 @@ def DivStressDynamicSGS(
     # Unpack only the variables we need
     txx, tyy, tzz, txy, txz, tyz = dynamicSGSmomentum[0:6]
     Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D = dynamicSGSmomentum[6:9]
+    Cs2_3D = dynamicSGSmomentum[9]
 
     # Compute divergence of stress
     divtx, divty, divtz = DivStress(txx, tyy, tzz,
@@ -174,7 +175,7 @@ def DivStressDynamicSGS(
 
     # Return both the divergence terms and the complete momentum results,
     # so they can be reused for scalar calculations
-    return divtx, divty, divtz, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D, dynamicSGSmomentum
+    return divtx, divty, divtz, Cs2_1D_avg1, Cs2_1D_avg2, beta1_1D, Cs2_3D, dynamicSGSmomentum
 
 
 # =================================================

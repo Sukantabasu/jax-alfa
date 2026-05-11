@@ -287,7 +287,11 @@ def ScalarLASDD(
     ff = b2 * e4
 
     # Compute beta2 for each vertical level
-    beta2_1D = ComputeBeta2(ff, ee, dd, cc, bb, aa)
+    computeBeta = optSgs in [1, 2]
+    if computeBeta:
+        beta2_1D = ComputeBeta2(ff, ee, dd, cc, bb, aa)
+    else:
+        beta2_1D = jnp.ones(nz)
 
     # Extend beta2 to 3D field
     beta2_3D = jnp.broadcast_to(beta2_1D.reshape(1, 1, nz), (nx, ny, nz))

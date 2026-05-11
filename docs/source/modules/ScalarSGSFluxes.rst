@@ -1,15 +1,10 @@
-Scalar SGS Flux Computations
-============================
+:orphan:
 
-.. automodule:: src.subgridscale.ScalarSGSFluxes
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Scalar SGS Flux Computations — Reorganized
+===========================================
 
-Source Code: ScalarSGSFluxes
-----------------------------
+This page has been superseded. Scalar SGS flux computations have been
+split into separate SM and WL implementations:
 
-.. literalinclude:: ../../../src/subgridscale/ScalarSGSFluxes.py
-   :language: python
-   :linenos:
-   :caption: ScalarSGSFluxes.py
+* :doc:`ScalarSGSFluxes_SM` — Smagorinsky base model
+* :doc:`ScalarSGSFluxes_WL` — Wong-Lilly base model

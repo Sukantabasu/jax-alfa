@@ -110,10 +110,11 @@ T_0 = 300  # unit: K
 # ------------------------------------------------------------
 
 # SGS model to use
-# 0: Static Smagorinsky
-# 2: Locally-averaged Scale-dependent Dynamic (LASDD) - Smagorinsky
-# 3: Locally-averaged Scale-dependent Dynamic (LASDD) - Wong-Lilly
-optSgs = 2
+# 1: LASDD-SM (Locally-averaged Scale-dependent Dynamic, Smagorinsky)
+# 2: LASDD-WL (Locally-averaged Scale-dependent Dynamic, Wong-Lilly)
+# 3: LAD-SM  (Locally-averaged Dynamic, Smagorinsky; beta=1)
+# 4: LAD-WL  (Locally-averaged Dynamic, Wong-Lilly; beta=1)
+optSgs = 1
 
 # How often dynamic SGS coefficients are computed?
 dynamicSGS_call_time = 1
@@ -122,9 +123,11 @@ dynamicSGS_call_time = 1
 # Dealiasing is not activated for FGR >= 2
 FGR = 1  # FGR = 1 implies implicit filtering
 
-# Initialize Cs2 and Cs2PrRatio for static SGS models
-Cs2 = 0.1 ** 2
+# Initial SGS coefficients (used before first dynamic update when dynamicSGS_call_time > 1)
+Cs2 = 0.1 ** 2        # SM models: initial Cs^2
+Cwl = 0.1 ** 2        # WL models: initial C_WL
 Cs2PrRatio = Cs2 / 1.0
+CwlPrRatio = Cwl / 1.0
 
 # ------------------------------------------------------------
 # Damping layer configuration

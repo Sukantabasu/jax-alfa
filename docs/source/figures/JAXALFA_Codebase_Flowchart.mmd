@@ -1,0 +1,81 @@
+flowchart TB
+    %% JAX-ALFA codebase flowchart for manuscript use.
+
+    subgraph A["Run setup"]
+        A1["Run directory<br/>Config.py"]
+        A2["ConfigLoader<br/>load run parameters"]
+        A3["DerivedVars<br/>scales, grid, filters,<br/>initial SGS coefficient fields"]
+        A4["Preprocess<br/>wavenumbers and zero arrays"]
+        A5["Initialization<br/>u, v, w, TH, geostrophic wind,<br/>surface-BC series, damping layer"]
+    end
+
+    subgraph B["Main time loop"]
+        B1["Explicit spectral filtering<br/>u, v, w, TH"]
+        B2["Surface fluxes and MOST<br/>constant flux, time-varying flux,<br/>or prescribed surface temperature"]
+        B3["Velocity and scalar gradients<br/>horizontal spectral derivatives<br/>vertical finite differences"]
+        B4["Advection terms<br/>momentum and scalar"]
+        B5["Buoyancy forcing"]
+        B6["Subgrid-scale closure"]
+        B7["Right-hand sides<br/>momentum and scalar"]
+        B8["Pressure projection<br/>Poisson solve and pressure gradients"]
+        B9["AB2 time advancement<br/>u, v, w, TH"]
+        B10["Diagnostics and outputs<br/>statistics, logs, 3D fields"]
+    end
+
+    subgraph C["SGS closure: optSgs = 1..4"]
+        C1{"Dynamic update step?<br/>iteration = istep or<br/>iteration mod dynamicSGS_call_time = 0"}
+        C2{"Model family"}
+        C3["SM coefficient model<br/>optSgs = 1 LASDD-SM<br/>optSgs = 3 LAD-SM"]
+        C4["WL coefficient model<br/>optSgs = 2 LASDD-WL<br/>optSgs = 4 LAD-WL"]
+        C5["DynamicSGS<br/>compute stresses and Cs2_3D/Cwl_3D"]
+        C6["DynamicSGSscalar<br/>compute scalar fluxes and<br/>Cs2PrRatio_3D/CwlPrRatio_3D"]
+        C7["Cache latest 3D coefficients"]
+        C8["StaticSGS / StaticSGSscalar<br/>reuse cached coefficients"]
+        C9["Stress and scalar-flux divergence<br/>div tau, div q"]
+    end
+
+    subgraph D["Shared numerical kernels"]
+        D1["FFT and dealiasing"]
+        D2["Test filtering"]
+        D3["Strain rates"]
+        D4["Planar means, staggered-grid averages,<br/>local filtering, polynomial roots"]
+    end
+
+    subgraph E["Postprocessing"]
+        E1["ALFA_Statistics_Iteration_*.npz"]
+        E2["ALFA_3DFields_Iteration_*.npz"]
+        E3["Analysis notebooks and figures"]
+    end
+
+    A1 --> A2 --> A3
+    A3 --> A4 --> A5 --> B1
+
+    B1 --> B2 --> B3 --> B4 --> B5 --> B6
+    B6 --> B7 --> B8 --> B9 --> B10
+    B9 --> B1
+
+    B6 --> C1
+    C1 -- "yes" --> C2
+    C2 -- "SM" --> C3 --> C5
+    C2 -- "WL" --> C4 --> C5
+    C5 --> C6 --> C7 --> C9
+    C1 -- "no" --> C8 --> C9
+    C7 -. "cached coefficients" .-> C8
+    C9 --> B7
+
+    D1 -.-> B1
+    D1 -.-> B3
+    D1 -.-> B4
+    D1 -.-> C5
+    D1 -.-> C6
+    D2 -.-> C5
+    D2 -.-> C6
+    D3 -.-> C5
+    D3 -.-> C8
+    D4 -.-> C5
+    D4 -.-> C6
+
+    B10 --> E1
+    B10 --> E2
+    E1 --> E3
+    E2 --> E3

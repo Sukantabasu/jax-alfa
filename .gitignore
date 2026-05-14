@@ -42,3 +42,7 @@ docs/build/
 .idea/
 .vscode/
 *.db
+
+# Vim swap files
+*.swp
+*.swo

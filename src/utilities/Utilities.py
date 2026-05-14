@@ -161,8 +161,9 @@ def Roots(coeffs, init_guess=1.0 + 0j, tol=1e-6, max_iter=20):
     """
 
     # Convert to complex arithmetic to handle complex roots
-    coeffs = coeffs.astype(jnp.complex128)
-    x = jnp.asarray(init_guess, dtype=jnp.complex128)
+    cdtype = jnp.complex128 if jax.config.jax_enable_x64 else jnp.complex64
+    coeffs = coeffs.astype(cdtype)
+    x = jnp.asarray(init_guess, dtype=cdtype)
 
     # Polynomial degree
     n = coeffs.shape[0] - 1

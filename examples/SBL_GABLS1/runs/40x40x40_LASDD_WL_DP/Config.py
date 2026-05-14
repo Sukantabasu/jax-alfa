@@ -15,13 +15,15 @@
 
 """
 File: Config.py
-===============
+=======================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
-:Date: 2025-10-22
-:Description: namelist file for JAX-ALFA runs
+:Date: 2026-05-08
+:Description: namelist for the GABLS1 stable boundary layer benchmark.
+              Reference: Beare et al. (2006), Boundary-Layer Meteorology.
+              Domain 400x400x400 m, 40^3 grid, surface cooling 0.25 K/hr.
 """
 
 
@@ -48,14 +50,14 @@ optGPU = 1
 # ------------------------------------------------------------
 
 # Domain size (m)
-l_x = 4000
-l_y = 4000
-l_z = 4000
+l_x = 400
+l_y = 400
+l_z = 400
 
 # Number of grid points
-nx = 200
-ny = 200
-nz = 200
+nx = 40
+ny = 40
+nz = 40
 
 # ------------------------------------------------------------
 # Time integration configuration
@@ -65,87 +67,85 @@ nz = 200
 istep = 1
 
 # Time stepping and simulation time
-dt = 0.5  # unit: sec
-SimTime = 300000  # unit: sec
+dt = 0.4        # unit: sec
+SimTime = 9 * 3600  # 9 hours, unit: sec
 
 # Galilean transformation
-Ugal = 3  # unit: m/s
+Ugal = 5  # unit: m/s
 
 # ------------------------------------------------------------
 # Surface configuration
 # ------------------------------------------------------------
 
-# 0: homogeneous, prescribed-flux
-# 1: heterogeneous, prescribed-flux
+# optSurfFlux: 0 = homogeneous, 1 = heterogeneous
 optSurfFlux = 0
 
-# Roughness lengths
-z0m = 0.01  # unit: m
-z0T = 0.01  # unit: m
+# optSurfBC: 0 = constant flux
+#            1 = time-varying flux (from SurfaceBCFile)
+#            2 = time-varying surface temperature (from SurfaceBCFile)
+optSurfBC = 2
 
-SensibleHeatFlux = 0.0 # K m/s
+# Roughness lengths (m)
+z0m = 0.1
+z0T = 0.1
 
+# SensibleHeatFlux: not used when optSurfBC >= 1; set to 0 as placeholder
+SensibleHeatFlux = 0.0  # K m/s
+
+# Path to surface BC file (relative to run directory)
+SurfaceBCFile = 'input/SurfaceBC.npz'
 
 # ------------------------------------------------------------
 # Forcing configuration
 # ------------------------------------------------------------
 
-# Geostrophic wind speeds
-Ug2 = 5  # unit: m/s
-Vg2 = 0  # unit: m/s
+# Geostrophic wind speeds (m/s)
+Ug2 = 8.0
+Vg2 = 0.0
 
-# Coriolis term
-f_coriolis = 1e-4  # unit: 1/s
+# Coriolis parameter: f = 2*Omega*sin(lat), lat=73 deg N
+f_coriolis = 1.39e-4  # unit: 1/s
 
-# Inversion strength
-inversion = 0/1000  # unit: K/m
+# Temperature inversion above 100 m (K/m)
+inversion = 0.01
 
-# Buoyancy calculation
-optBuoyancy = 2  #1: use reference T_0, 2: use local THv
+# Buoyancy calculation: 1 = use fixed T_0
+optBuoyancy = 1
 
-T_0 = 300  # unit: K
+# Reference temperature (K) — initial surface temperature
+T_0 = 265.0
 
 # ------------------------------------------------------------
 # Subgrid-scale configuration
 # ------------------------------------------------------------
 
-# SGS model to use
-# 0: Static Smagorinsky
-# 1: Locally-averaged Dynamic (LAD) - Smagorinsky
-# 2: Locally-averaged Scale-dependent Dynamic (LASDD) - Smagorinsky
+# SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
 optSgs = 2
 
-# How often dynamic SGS coefficients are computed?
+# Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1
 
-# Filter to grid ratio (recommended: FGR = 2)
-# Dealiasing is not activated for FGR >= 2
-FGR = 1  # FGR = 1 implies implicit filtering
+# Filter to grid ratio (FGR=1: implicit filtering with dealiasing)
+FGR = 2 
 
-# Initialize Cs2 and Cs2PrRatio for static SGS models
-Cs2 = 0.1 ** 2
+# Initial SGS coefficients (used before first dynamic update when dynamicSGS_call_time > 1)
+Cs2 = 0.1 ** 2        # SM models: initial Cs^2
+Cwl = 0.1 ** 2        # WL models: initial C_WL
 Cs2PrRatio = Cs2 / 1.0
+CwlPrRatio = Cwl / 1.0
 
 # ------------------------------------------------------------
 # Damping layer configuration
 # ------------------------------------------------------------
 
-# Rayleigh damping to activate?
-optDamping = 1  # 1: yes, 0: no
-
-# Starting height of damping layer
-z_damping = 2500  # unit: m
-
-# Relaxation time
-RelaxTime = 300  # unit: s
+optDamping = 1      # 1: activate Rayleigh damping
+z_damping  = 300.0  # unit: m
+RelaxTime  = 60.0  # unit: s
 
 # ------------------------------------------------------------
 # Statistics computation
 # ------------------------------------------------------------
 
-# Collect samples every SampleInterval_sec (sec)
-SampleInterval_sec = 10.0 # ideally, should be divisible by dt
-# Output averages every OutputInterval_sec (sec)
-OutputInterval_sec = 60.0 # ideally, should be divisible by dt
-# Output 3D fields every Output3DInterval_sec (sec)
-Output3DInterval_sec = 10*3600.0 # ideally, should be divisible by dt
+SampleInterval_sec  = 10.0    # collect a sample every 10 s
+OutputInterval_sec  = 60.0  # output averaged stats every 1 min
+Output3DInterval_sec = 9*3600.0 # output 3D fields every 1 hour

@@ -120,7 +120,7 @@ T_0 = 265.0
 # ------------------------------------------------------------
 
 # SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
-optSgs = 1
+optSgs = 3
 
 # Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1
@@ -148,4 +148,4 @@ RelaxTime  = 60.0   # unit: s
 
 SampleInterval_sec   = 10.0    # collect a sample every 10 s
 OutputInterval_sec   = 60.0    # output averaged stats every 1 min
-Output3DInterval_sec = 3600.0  # output 3D fields every 1 hour
+Output3DInterval_sec = 9*3600.0  # output 3D fields every 1 hour

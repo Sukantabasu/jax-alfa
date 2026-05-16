@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=320G
+#SBATCH --mem=80G
 
 umask 002
 set -eo pipefail
@@ -19,7 +19,7 @@ mkdir -p slurmout
 # ============================================================
 
 export JAXALFA_ROOT=/network/rit/lab/basulab/Sukanta/MODELS/JAX-ALFA/JAXALFA0.1
-export JAXALFA_RUNDIR=$JAXALFA_ROOT/examples/NBL_A94/runs/200x200x200
+export JAXALFA_RUNDIR=$JAXALFA_ROOT/examples/SBL_GABLS1/runs/200x200x200_LAD_WL_DP
 
 cd "$JAXALFA_ROOT"
 
@@ -72,7 +72,11 @@ fi
 # ============================================================
 
 echo "Generating input files..."
-python "$JAXALFA_RUNDIR"/CreateInputs*.py
+python $JAXALFA_RUNDIR/CreateInputs*.py
+for f in "$JAXALFA_RUNDIR"/CreateSurfaceBC*.py; do
+    [ -f "$f" ] && python "$f"
+done
+
 
 # ============================================================
 # Run JAX-ALFA

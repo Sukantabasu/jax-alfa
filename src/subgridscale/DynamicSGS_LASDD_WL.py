@@ -75,9 +75,8 @@ def ComputeBeta1(ff, ee, dd, cc, bb, aa):
         roots = jax.vmap(lambda guess:
                          Roots(coeffs, init_guess=guess))(guesses)
 
-        imag_tol = jnp.finfo(roots.real.dtype).eps * 1e3
         valid_roots = jnp.where(
-            (jnp.abs(jnp.imag(roots)) < imag_tol) &
+            (jnp.abs(jnp.imag(roots)) < 1e-6) &
             (jnp.real(roots) > 0) &
             (jnp.real(roots) < 5.0),
             jnp.real(roots),

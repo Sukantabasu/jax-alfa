@@ -73,4 +73,8 @@ if 'optSurfBC' not in dir():
 if 'SurfaceBCFile' not in dir():
     SurfaceBCFile = 'input/SurfaceBC.npz'
 
+# Backward-compatible default for float precision
+if 'use_double_precision' not in dir():
+    use_double_precision = False
+
 del _rundir, _config_path, _f

@@ -41,7 +41,6 @@ else:
 import jax
 
 if Config.use_double_precision:
-    # os.environ["JAX_ENABLE_X64"] = "True"
     jax.config.update("jax_enable_x64", True)
 
 # Uncomment this line if the dynamic RAM allocation is needed

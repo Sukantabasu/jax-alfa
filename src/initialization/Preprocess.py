@@ -113,7 +113,6 @@ def ZeRo3DIni():
         ZeRo = jnp.zeros((nx, ny, nz), dtype=jnp.float64)
     else:
         ZeRo = jnp.zeros((nx, ny, nz), dtype=jnp.float32)
-
     return ZeRo
 
 
@@ -123,7 +122,6 @@ def ZeRo2DIni():
         ZeRo2D = jnp.zeros((nx, ny), dtype=jnp.float64)
     else:
         ZeRo2D = jnp.zeros((nx, ny), dtype=jnp.float32)
-
     return ZeRo2D
 
 
@@ -133,7 +131,6 @@ def ZeRo1DIni():
         ZeRo1D = jnp.zeros((nz), dtype=jnp.float64)
     else:
         ZeRo1D = jnp.zeros((nz), dtype=jnp.float32)
-
     return ZeRo1D
 
 
@@ -143,7 +140,6 @@ def ZeRo3D_fftIni():
         ZeRo3D_fft = jnp.zeros((nx, ny_rfft, nz), dtype=jnp.complex128)
     else:
         ZeRo3D_fft = jnp.zeros((nx, ny_rfft, nz), dtype=jnp.complex64)
-
     return ZeRo3D_fft
 
 
@@ -153,7 +149,6 @@ def ZeRo3D_padIni():
         ZeRo3D_pad_fft = jnp.zeros((mx, my, nz), dtype=jnp.float64)
     else:
         ZeRo3D_pad_fft = jnp.zeros((mx, my, nz), dtype=jnp.float32)
-
     return ZeRo3D_pad_fft
 
 
@@ -163,5 +158,4 @@ def ZeRo3D_pad_fftIni():
         ZeRo3D_pad_fft = jnp.zeros((mx, my_rfft, nz), dtype=jnp.complex128)
     else:
         ZeRo3D_pad_fft = jnp.zeros((mx, my_rfft, nz), dtype=jnp.complex64)
-
     return ZeRo3D_pad_fft

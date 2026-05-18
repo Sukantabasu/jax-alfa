@@ -14,22 +14,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-File: CreateSurfaceBC_GABLS1_40.py
-===================================
+File: CreateSurfaceBC_GABLS1_200.py
+=====================================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
 :Date: 2026-05-08
-:Description: Creates input/SurfaceBC.npz for the GABLS1 case.
+:Description: Creates input/SurfaceBC.npz for the GABLS1 case (200^3 grid).
 
               Supports two modes (set optSurfTemp below):
                 1 — Analytical linear cooling (GABLS1 standard)
                 2 — Interpolation from observed data at sparse hours
-
-              The file stores one surface temperature value per simulation
-              timestep (sampling rate = dt from Config.py), so no
-              run-time interpolation is needed in Main.py.
 
               Output file: input/SurfaceBC.npz
                 data_series : (nsteps+1,) float64, surface temperature (K)

@@ -14,15 +14,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-File: CreateInputs_GABLS1_40.py
-================================
+File: CreateInputs_GABLS1_200.py
+=================================
 
 :Author: Sukanta Basu
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
 :Date: 2026-05-08
 :Description: Creates vel.ini and TH.ini for the GABLS1 stable boundary
-              layer case on a 40x40x40 grid.
+              layer case on a 200x200x200 grid.
 
               Initial conditions (Beare et al. 2006):
                 u = Ug = 8 m/s, v = 0 m/s (plus small perturbations)
@@ -45,9 +45,9 @@ np.random.seed(42)
 # ============================================================
 
 l_z = 400   # domain height (m)
-nx  = 40
-ny  = 40
-nz  = 40
+nx  = 200
+ny  = 200
+nz  = 200
 
 Ug           = 8.0    # geostrophic wind (m/s)
 T_sfc_init   = 265.0  # initial surface temperature (K)
@@ -61,7 +61,7 @@ rt = 0.01  # for temperature
 # Vertical grid (half levels)
 # ============================================================
 
-dz_dim = l_z / (nz - 1)   # ~10.26 m
+dz_dim = l_z / (nz - 1)   # ~2.01 m
 z = np.array([(k + 0.5) * dz_dim for k in range(nz)])
 
 # ============================================================

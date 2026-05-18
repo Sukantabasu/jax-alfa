@@ -23,7 +23,7 @@ File: Config.py
 :Date: 2026-05-08
 :Description: namelist for the GABLS1 stable boundary layer benchmark.
               Reference: Beare et al. (2006), Boundary-Layer Meteorology.
-              Domain 400x400x400 m, 40^3 grid, surface cooling 0.25 K/hr.
+              Domain 400x400x400 m, 200^3 grid, surface cooling 0.25 K/hr.
 """
 
 
@@ -41,7 +41,7 @@ import numpy as np
 # ------------------------------------------------------------
 # Platform options
 # ------------------------------------------------------------
-use_double_precision = False
+use_double_precision = True
 # 0: use CPU, 1: use GPU
 optGPU = 1
 
@@ -55,9 +55,9 @@ l_y = 400
 l_z = 400
 
 # Number of grid points
-nx = 40
-ny = 40
-nz = 40
+nx = 200
+ny = 200
+nz = 200
 
 # ------------------------------------------------------------
 # Time integration configuration
@@ -67,7 +67,7 @@ nz = 40
 istep = 1
 
 # Time stepping and simulation time
-dt = 0.25        # unit: sec
+dt = 0.05       # unit: sec
 SimTime = 9 * 3600  # 9 hours, unit: sec
 
 # Galilean transformation
@@ -120,13 +120,13 @@ T_0 = 265.0
 # ------------------------------------------------------------
 
 # SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
-optSgs = 3
+optSgs = 4
 
 # Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1
 
 # Filter to grid ratio (FGR=1: implicit filtering with dealiasing)
-FGR = 2 
+FGR = 2
 
 # Initial SGS coefficients (used before first dynamic update when dynamicSGS_call_time > 1)
 Cs2 = 0.1 ** 2        # SM models: initial Cs^2
@@ -140,12 +140,12 @@ CwlPrRatio = Cwl / 1.0
 
 optDamping = 1      # 1: activate Rayleigh damping
 z_damping  = 300.0  # unit: m
-RelaxTime  = 60.0  # unit: s
+RelaxTime  = 60.0   # unit: s
 
 # ------------------------------------------------------------
 # Statistics computation
 # ------------------------------------------------------------
 
-SampleInterval_sec  = 10.0    # collect a sample every 10 s
-OutputInterval_sec  = 60.0  # output averaged stats every 1 min
-Output3DInterval_sec = 9*3600.0 # output 3D fields every 1 hour
+SampleInterval_sec   = 10.0    # collect a sample every 10 s
+OutputInterval_sec   = 60.0    # output averaged stats every 1 min
+Output3DInterval_sec = 9*3600.0  # output 3D fields every 1 hour

@@ -160,7 +160,10 @@ def ComputeStats(
         mU = (jnp.mean(u, axis=(0, 1)) + Ugal) * u_scale
         mV = jnp.mean(v, axis=(0, 1)) * u_scale
         mW = jnp.mean(w, axis=(0, 1)) * u_scale
-        mTH = jnp.mean(TH, axis=(0, 1)) * TH_scale
+        # TH is stored as anomaly TH' = TH - T_0; add T_0 back for output.
+        # mTH_anom is kept separately as the non-dim fluctuation reference.
+        mTH_anom = jnp.mean(TH, axis=(0, 1))
+        mTH = (mTH_anom + T_0_nondim) * TH_scale
 
         mdUdz = jnp.mean(dudz, axis=(0, 1)) * (u_scale / z_scale)
         mdVdz = jnp.mean(dvdz, axis=(0, 1)) * (u_scale / z_scale)
@@ -184,7 +187,7 @@ def ComputeStats(
             u_f = u[:, :, k] + Ugal - mU[k]
             v_f = v[:, :, k] - mV[k]
             w_f = w[:, :, k] - mW[k]
-            TH_f = TH[:, :, k] - mTH[k]
+            TH_f = TH[:, :, k] - mTH_anom[k]
 
             # Compute variances and horizontal fluxes
             u2 = jnp.mean(u_f ** 2) * (u_scale ** 2)

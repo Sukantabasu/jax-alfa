@@ -92,7 +92,9 @@ def Initialize_TH():
 
     TH = np.reshape(TH, (nx, ny, nz), order='F')
 
-    return jnp.array(TH)
+    # Subtract base state in numpy float64 before JAX cast; TH is stored as
+    # anomaly TH' = TH - T_0 throughout the simulation.
+    return jnp.array(TH - T_0_nondim)
 
 
 # ============================================================
@@ -111,8 +113,11 @@ def Initialize_SurfaceBC():
     --------
     SurfaceBC_series : jnp.ndarray of shape (nsteps+1,)
         Non-dimensional surface BC values at every timestep from t=0 to t=SimTime.
-        For optSurfBC=1: non-dim heat flux  = data / (u_scale * TH_scale)
-        For optSurfBC=2: non-dim temperature = data / TH_scale
+        For optSurfBC=1: non-dim heat flux     = data / (u_scale * TH_scale)
+        For optSurfBC=2: non-dim temp anomaly  = (data - T_0) / TH_scale
+            Stored as anomaly so float32 represents small values (~0 to -2.25 K)
+            rather than absolute temperature (~265 K). Surface flux functions
+            expect this anomaly and compare it against TH_air anomalies.
     """
 
     data = np.load(_SurfaceBCFile)
@@ -141,10 +146,13 @@ def Initialize_SurfaceBC():
         )
 
     # --- Non-dimensionalise ---
+    # optSurfBC=2: store as anomaly (theta_sfc - T_0) / TH_scale.
+    # Subtraction happens here in NumPy float64, so the small differences
+    # (0 to -2.25 K) are stored accurately when JAX casts to float32.
     if optSurfBC == 1:
         series_nondim = series / (u_scale * TH_scale)
     else:
-        series_nondim = series / TH_scale
+        series_nondim = (series - T_0) / TH_scale
 
     return jnp.array(series_nondim)
 

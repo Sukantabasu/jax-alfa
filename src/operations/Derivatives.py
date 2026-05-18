@@ -105,7 +105,7 @@ def velocityGradients(
 
 @jax.jit
 def potentialTemperatureGradients(
-        TH, TH_fft,
+        TH,
         kx2, ky2,
         ustar, qz_sfc, MOSTfunctions, ZeRo3D):
     """
@@ -113,12 +113,8 @@ def potentialTemperatureGradients(
     -----------
     TH : ndarray of shape (nx, ny, nz)
         Potential temperature in physical space
-    TH_fft : ndarray of shape (nx, ny//2 + 1, nz)
-        Pre-computed Fourier transforms of potential temperature
     kx2, ky2 : ndarray of shape (nx, ny//2 + 1, nz)
         Pre-computed wavenumber arrays for spectral derivatives
-    fi2D_h : ndarray of shape (nx, ny)
-        Normalized gradient function for Monin-Obukhov similarity
     qz_sfc : ndarray of shape (nx, ny)
         Surface sensible heat flux, unit: K m/s
     ustar : ndarray of shape (nx, ny)
@@ -133,23 +129,24 @@ def potentialTemperatureGradients(
 
     Notes:
     ------
-    - Horizontal derivatives (x, y) are computed using spectral methods via `Derivxy`
+    - Horizontal derivatives (x, y) are computed spectrally from TH, which is
+      stored as anomaly TH' = TH - T_0 throughout the simulation
     - Vertical derivatives (z) are computed using finite differences via `Derivz_TH`
     - Boundary conditions for vertical derivatives are handled in `Derivz_TH`
     """
 
-    # X derivatives
-    dTHdx = Derivxy(TH_fft, kx2)
-
-    # Y derivatives
-    dTHdy = Derivxy(TH_fft, ky2)
+    # TH is stored as anomaly (TH - T_0), so no base-state subtraction needed.
+    # FFT butterfly operations now work on small values (~0-5 K) rather than ~265 K.
+    TH_pert_fft = jnp.fft.rfft2(TH, axes=(0, 1))
+    dTHdx = Derivxy(TH_pert_fft, kx2)
+    dTHdy = Derivxy(TH_pert_fft, ky2)
 
     # unpack MOST functions
     (psi2D_m, psi2D_m0,
      psi2D_h, psi2D_h0,
      fi2D_m, fi2D_h) = MOSTfunctions
 
-    # Z derivatives
+    # Z derivatives — finite differences; T_0 cancels in diff() so no benefit
     dTHdz = Derivz_TH(TH, ustar, qz_sfc, fi2D_h, ZeRo3D)
 
     # Return all derivatives

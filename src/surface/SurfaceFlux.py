@@ -189,8 +189,8 @@ def SurfaceFlux_HomogeneousConstantFlux(u, v, TH, MOSTfunctions):
     M_sfc_avg = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
     M_sfc_loc = M_sfc_avg * One2D
 
-    TH_sfc_avg = jnp.mean(TH[:, :, 0])
-    TH_ref     = TH_sfc_avg * One2D
+    # TH is anomaly; add T_0 to get absolute temperature for Obukhov length.
+    TH_ref = (jnp.mean(TH[:, :, 0]) + T_0_nondim) * One2D
 
     denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
@@ -222,7 +222,8 @@ def SurfaceFlux_HeterogeneousConstantFlux(u, v, TH, MOSTfunctions):
     qz_sfc_avg = jnp.mean(qz_sfc)
 
     M_sfc_loc = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
-    TH_ref    = TH[:, :, 0]
+    # TH is anomaly; add T_0 for absolute temperature for Obukhov length.
+    TH_ref = TH[:, :, 0] + T_0_nondim
 
     denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
@@ -269,8 +270,8 @@ def SurfaceFlux_HomogeneousVaryingFlux(u, v, TH, qz_sfc_t, MOSTfunctions):
     M_sfc_avg = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
     M_sfc_loc = M_sfc_avg * One2D
 
-    TH_sfc_avg = jnp.mean(TH[:, :, 0])
-    TH_ref     = TH_sfc_avg * One2D
+    # TH is anomaly; add T_0 for absolute temperature for Obukhov length.
+    TH_ref = (jnp.mean(TH[:, :, 0]) + T_0_nondim) * One2D
 
     denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
@@ -310,7 +311,8 @@ def SurfaceFlux_HeterogeneousVaryingFlux(u, v, TH, qz_sfc_t, MOSTfunctions):
     qz_sfc_2D  = qz_sfc_t * One2D
 
     M_sfc_loc = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
-    TH_ref    = TH[:, :, 0]
+    # TH is anomaly; add T_0 for absolute temperature for Obukhov length.
+    TH_ref = TH[:, :, 0] + T_0_nondim
 
     denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
@@ -337,8 +339,9 @@ def SurfaceFlux_HomogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
 
     Parameters:
     -----------
-    TH_sfc_t : scalar JAX value, non-dimensional surface temperature at current
-               timestep (loaded from SurfaceBC.npz, divided by TH_scale)
+    TH_sfc_t : scalar JAX value, non-dimensional surface temperature anomaly
+               (theta_sfc - T_0) / TH_scale at current timestep, as returned
+               by Initialize_SurfaceBC for optSurfBC=2
 
     Returns:
     --------
@@ -356,20 +359,23 @@ def SurfaceFlux_HomogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
      psi2D_h, psi2D_h0,
      fi2D_m, fi2D_h) = MOSTfunctions
 
-    # Planar-mean surface wind and air temperature
-    M_sfc_avg  = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
-    TH_air_avg = jnp.mean(TH[:, :, 0])
-    M_sfc_loc  = M_sfc_avg * One2D
-    TH_air_loc = TH_air_avg * One2D
+    # Planar-mean surface wind speed
+    M_sfc_avg = jnp.mean(jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2))
+    M_sfc_loc = M_sfc_avg * One2D
+
+    # TH is stored as anomaly (TH - T_0); TH_sfc_t is also an anomaly from
+    # Initialize_SurfaceBC. Both are anomalies so the difference is direct.
+    TH_air_anom_avg = jnp.mean(TH[:, :, 0])
+    TH_air_loc      = (TH_air_anom_avg + T_0_nondim) * One2D  # absolute for MOST
 
     # Friction velocity (with floor to prevent near-zero division)
     denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
 
-    # Diagnose surface heat flux from prescribed surface temperature
+    # Diagnose surface heat flux — both TH_sfc_t and TH_air_anom_avg are anomalies
     # qz = -u* x th*,  th* = vonk x (TH_air - TH_s) / denom_h  (>0 for stable)
-    denom_h   = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
-    qz_sfc_2D = ustar * vonk * (TH_sfc_t - TH_air_loc) / denom_h
+    denom_h    = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
+    qz_sfc_2D  = ustar * vonk * (TH_sfc_t - TH_air_anom_avg) * One2D / denom_h
     qz_sfc_avg = jnp.mean(qz_sfc_2D)
 
     MOSTfunctions, invOB = _update_MOSTfunctions(
@@ -389,7 +395,9 @@ def SurfaceFlux_HeterogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
 
     Parameters:
     -----------
-    TH_sfc_t : scalar JAX value, non-dimensional surface temperature
+    TH_sfc_t : scalar JAX value, non-dimensional surface temperature anomaly
+               (theta_sfc - T_0) / TH_scale at current timestep, as returned
+               by Initialize_SurfaceBC for optSurfBC=2
 
     Returns:
     --------
@@ -405,21 +413,23 @@ def SurfaceFlux_HeterogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
      psi2D_h, psi2D_h0,
      fi2D_m, fi2D_h) = MOSTfunctions
 
-    # Local surface wind and air temperature
-    M_sfc_loc  = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
-    TH_air_loc = TH[:, :, 0]
+    # Local surface wind speed
+    M_sfc_loc = jnp.sqrt((u[:, :, 0] + Ugal) ** 2 + v[:, :, 0] ** 2)
+
+    # TH is stored as anomaly (TH - T_0); TH_sfc_t is also an anomaly.
+    TH_air_anom_loc = TH[:, :, 0]
 
     # Friction velocity
     denom_m = jnp.log(0.5 * dz * z_scale / z0m) + psi2D_m - psi2D_m0
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
 
-    # Diagnose surface heat flux
-    denom_h   = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
-    qz_sfc_2D = ustar * vonk * (TH_sfc_t - TH_air_loc) / denom_h
+    # Diagnose surface heat flux — both TH_sfc_t and TH_air_anom_loc are anomalies
+    denom_h    = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
+    qz_sfc_2D  = ustar * vonk * (TH_sfc_t - TH_air_anom_loc) / denom_h
     qz_sfc_avg = jnp.mean(qz_sfc_2D)
 
-    # Use planar-mean TH_air as reference for Obukhov length
-    TH_air_ref = jnp.mean(TH_air_loc) * jnp.ones((nx, ny))
+    # Absolute TH_air as reference for Obukhov length
+    TH_air_ref = (jnp.mean(TH_air_anom_loc) + T_0_nondim) * jnp.ones((nx, ny))
 
     MOSTfunctions, invOB = _update_MOSTfunctions(
         ustar, qz_sfc_avg, TH_air_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)

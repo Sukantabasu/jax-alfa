@@ -131,8 +131,8 @@ def BuoyancyOpt2(TH, H, ZeRo3D):
     # Reshape THv_bar for broadcasting
     THv_bar_3D = THv_bar.reshape(1, 1, -1)
 
-    # Compute normalized deviation
-    THv_normalized = (THv - THv_bar_3D) / THv_bar_3D
+    # TH is anomaly so THv_bar is ~0; add T_0 to get absolute denominator.
+    THv_normalized = (THv - THv_bar_3D) / (THv_bar_3D + T_0_nondim)
 
     # Compute the half-level averages for all levels
     above = THv_normalized[:, :, 1:nz]

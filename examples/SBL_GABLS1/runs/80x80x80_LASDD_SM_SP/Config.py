@@ -41,7 +41,7 @@ import numpy as np
 # ------------------------------------------------------------
 # Platform options
 # ------------------------------------------------------------
-use_double_precision = True
+use_double_precision = False
 # 0: use CPU, 1: use GPU
 optGPU = 1
 
@@ -120,7 +120,7 @@ T_0 = 265.0
 # ------------------------------------------------------------
 
 # SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
-optSgs = 4
+optSgs = 1
 
 # Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1

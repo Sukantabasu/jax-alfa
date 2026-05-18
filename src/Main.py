@@ -126,7 +126,7 @@ for iteration in range(istep, nsteps+1, 1):
     v, v_fft = Filtering_Explicit(FFT(v))
     w, w_fft = Filtering_Explicit(FFT(w))
 
-    TH, TH_fft = Filtering_Explicit(FFT(TH))
+    TH, _ = Filtering_Explicit(FFT(TH))
 
     # ------------------------------------------------------------
     #  Compute Surface Fluxes
@@ -187,7 +187,7 @@ for iteration in range(istep, nsteps+1, 1):
 
     (dTHdx, dTHdy, dTHdz) = (
         potentialTemperatureGradients(
-            TH, TH_fft,
+            TH,
             kx2, ky2,
             ustar, qz_sfc_step, MOSTfunctions,
             ZeRo3D))
@@ -425,11 +425,10 @@ for iteration in range(istep, nsteps+1, 1):
     if iteration % Output3DInterval == 0:
         # Create dictionary of fields to save
         Fields3D = {
-            "u": u + Ugal,
-            # Add Galilean transformation velocity back to u component
+            "u": u + Ugal,   # Galilean velocity added back
             "v": v,
             "w": w,
-            "TH": TH
+            "TH": TH + T_0_nondim  # anomaly → absolute (TH stored as TH - T_0)
         }
 
         # Generate output filename and save 3D fields

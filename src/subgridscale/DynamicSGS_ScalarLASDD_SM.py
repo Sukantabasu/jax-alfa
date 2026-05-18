@@ -80,8 +80,9 @@ def ComputeBeta2(ff, ee, dd, cc, bb, aa):
                          Roots(coeffs, init_guess=guess))(guesses)
 
         # Filter valid real roots
+        imag_tol = jnp.finfo(roots.real.dtype).eps * 1e3
         valid_roots = jnp.where(
-            (jnp.abs(jnp.imag(roots)) < 1e-10) &
+            (jnp.abs(jnp.imag(roots)) < imag_tol) &
             (jnp.real(roots) > 0) &
             (jnp.real(roots) < 5.0),
             jnp.real(roots),
@@ -173,7 +174,10 @@ def ScalarLASDD(
         1D profile of beta2
     """
 
-    TH_ = TH.copy()
+    # Subtract base state to avoid cancellation in Leonard flux products
+    # TH is stored as anomaly (TH - T_0), so Leonard flux uTH_hat - u_hat*TH_hat
+    # operates on small values (~0-5 K) with no catastrophic cancellation.
+    TH_ = TH
 
     # Convert dTHdz to THz (at proper grid locations)
     THz = ZeRo3D.copy()
@@ -187,12 +191,12 @@ def ScalarLASDD(
     wTH = w_ * TH_
 
     # Apply filtering
-    TH_hat = Filtering_Level1(FFT(TH))
+    TH_hat = Filtering_Level1(FFT(TH_))
     uTH_hat = Filtering_Level1(FFT(uTH))
     vTH_hat = Filtering_Level1(FFT(vTH))
     wTH_hat = Filtering_Level1(FFT(wTH))
 
-    TH_hatd = Filtering_Level2(FFT(TH))
+    TH_hatd = Filtering_Level2(FFT(TH_))
     uTH_hatd = Filtering_Level2(FFT(uTH))
     vTH_hatd = Filtering_Level2(FFT(vTH))
     wTH_hatd = Filtering_Level2(FFT(wTH))

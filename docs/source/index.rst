@@ -56,7 +56,6 @@ Requirements
 
    tutorial/Tutorial_notebook
 
-
 .. toctree::
    :maxdepth: 1
    :caption: Performance Benchmarks

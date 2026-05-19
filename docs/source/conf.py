@@ -63,7 +63,7 @@ html_static_path = ['_static']
 html_theme_options = {
     'collapse_navigation': False,
     'sticky_navigation': True,
-    'navigation_depth': 4,
+    'navigation_depth': 2,
 }
 html_logo = "_static/logo.png"
 

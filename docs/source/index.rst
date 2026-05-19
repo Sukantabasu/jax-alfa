@@ -39,12 +39,6 @@ Requirements
 - NumPy
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Change Log
-
-   modules/Log
-
-.. toctree::
    :maxdepth: 2
    :caption: Getting Started
 

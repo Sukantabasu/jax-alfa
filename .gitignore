@@ -24,8 +24,7 @@ __pycache__/
 run.log
 
 # JAX-ALFA data files (too large for git)
-vel.ini
-TH.ini
+*.ini
 *.npz
 
 # Anaconda project files

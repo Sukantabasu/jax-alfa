@@ -18,7 +18,7 @@ File: DerivedVars.py
 ==========================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
 :Description: Derived variables for JAXLES computed from base configuration
@@ -64,6 +64,15 @@ inversion_nondim = inversion * (z_scale / TH_scale)
 
 # Non-dimensional surface sensible heat flux
 qz_sfc = SensibleHeatFlux * jnp.ones((nx, ny)) / (u_scale * TH_scale)
+
+# Moisture scale (= 1 for dimensional Q in kg/kg throughout)
+Q_scale = 1
+
+# Non-dimensional constant surface moisture flux (kg/kg m/s)
+qm_sfc = MoistureFlux * jnp.ones((nx, ny)) / (u_scale * Q_scale)
+
+# Non-dimensional moisture gradient above domain top (kg/kg per non-dim length)
+q_inversion_nondim = q_inversion * (z_scale / Q_scale)
 
 # Non-dimensional grid spacing
 dx = 2 * pi / nx

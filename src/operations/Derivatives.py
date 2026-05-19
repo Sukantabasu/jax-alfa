@@ -18,7 +18,7 @@ File: Derivatives.py
 ===========================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
 :Description: computes derivatives in x, y and z directions
@@ -276,6 +276,35 @@ def Derivz_TH(TH, ustar, qz_sfc, fi2D_h, ZeRo3D):
 # ============================================================
 #  Vertical derivatives for a generic variable on uvp nodes
 # ============================================================
+
+@jax.jit
+def moistureGradients(
+        Q,
+        kx2, ky2,
+        ustar, qm_sfc, MOSTfunctions, ZeRo3D):
+    """
+    Parameters:
+    -----------
+    Q : ndarray of shape (nx, ny, nz) — specific humidity (kg/kg)
+    kx2, ky2 : ndarray — wavenumber arrays for spectral derivatives
+    ustar : ndarray (nx, ny) — friction velocity
+    qm_sfc : ndarray (nx, ny) — surface moisture flux (non-dim)
+    MOSTfunctions : tuple of six (nx, ny) stability arrays
+    ZeRo3D : ndarray (nx, ny, nz) — pre-allocated zero array
+
+    Returns:
+    --------
+    dQdx, dQdy, dQdz : ndarray (nx, ny, nz)
+    """
+    Q_fft = jnp.fft.rfft2(Q, axes=(0, 1))
+    dQdx  = Derivxy(Q_fft, kx2)
+    dQdy  = Derivxy(Q_fft, ky2)
+
+    (_, _, _, _, _, fi2D_h) = MOSTfunctions
+    dQdz = Derivz_TH(Q, ustar, qm_sfc, fi2D_h, ZeRo3D)
+
+    return dQdx, dQdy, dQdz
+
 
 @jax.jit
 def Derivz_Generic_uvp(F, ZeRo3D):

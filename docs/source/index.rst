@@ -21,6 +21,8 @@ Features
 - Finite difference methods for vertical derivatives
 - FFT-based direct Poisson solver
 - Dynamic SGS coefficient computation
+- Prognostic potential temperature and specific humidity scalars
+- Virtual potential temperature buoyancy coupling
 - JAX-accelerated computations for CPUs & GPUs
 - Either single or double precision computations
 
@@ -72,7 +74,7 @@ Requirements
    examples/SBL_GABLS3/index
    examples/SBL_GABLS4/index
    examples/ET_NB86/index
-   examples/DC_WANGARA/index
+   examples/DC_Wangara/index
 
 .. toctree::
    :maxdepth: 1

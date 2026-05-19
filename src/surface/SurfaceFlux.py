@@ -18,7 +18,7 @@ File: SurfaceFlux.py
 ==============================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-29
 :Description: surface flux calculation module.
@@ -130,7 +130,11 @@ def _update_MOSTfunctions(ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0,
 
     z1_over_L   = (0.5 * dz) * invOB
     z0m_over_L  = (z0m / z_scale) * invOB
-    z0T_over_L  = (z0T / z_scale) * invOB
+
+    # When zTemperature > 0 the surface temperature is observed at that screen
+    # height (m), not at z0T.  Use it as the reference for psi_h0 and denom_h.
+    _z_ref_T        = zTemperature if zTemperature > 0.0 else z0T
+    z_ref_T_over_L  = (_z_ref_T / z_scale) * invOB
 
     psi2D_m, psi2D_h, fi2D_m, fi2D_h = jax.lax.cond(
         is_stable,
@@ -146,8 +150,8 @@ def _update_MOSTfunctions(ustar, qz_sfc_avg, TH_ref, psi2D_m, psi2D_m0,
 
     _, psi2D_h0, _, _ = jax.lax.cond(
         is_stable,
-        lambda _: MOSTstable(z0T_over_L),
-        lambda _: MOSTunstable(z0T_over_L),
+        lambda _: MOSTstable(z_ref_T_over_L),
+        lambda _: MOSTunstable(z_ref_T_over_L),
         operand=None)
 
     MOSTfunctions = (psi2D_m, psi2D_m0, psi2D_h, psi2D_h0, fi2D_m, fi2D_h)
@@ -374,7 +378,8 @@ def SurfaceFlux_HomogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
 
     # Diagnose surface heat flux — both TH_sfc_t and TH_air_anom_avg are anomalies
     # qz = -u* x th*,  th* = vonk x (TH_air - TH_s) / denom_h  (>0 for stable)
-    denom_h    = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
+    _z_ref_T   = zTemperature if zTemperature > 0.0 else z0T
+    denom_h    = jnp.log(0.5 * dz * z_scale / _z_ref_T) + psi2D_h - psi2D_h0
     qz_sfc_2D  = ustar * vonk * (TH_sfc_t - TH_air_anom_avg) * One2D / denom_h
     qz_sfc_avg = jnp.mean(qz_sfc_2D)
 
@@ -424,7 +429,8 @@ def SurfaceFlux_HeterogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
     ustar   = jnp.maximum(vonk * M_sfc_loc / denom_m, 1e-3)
 
     # Diagnose surface heat flux — both TH_sfc_t and TH_air_anom_loc are anomalies
-    denom_h    = jnp.log(0.5 * dz * z_scale / z0T) + psi2D_h - psi2D_h0
+    _z_ref_T   = zTemperature if zTemperature > 0.0 else z0T
+    denom_h    = jnp.log(0.5 * dz * z_scale / _z_ref_T) + psi2D_h - psi2D_h0
     qz_sfc_2D  = ustar * vonk * (TH_sfc_t - TH_air_anom_loc) / denom_h
     qz_sfc_avg = jnp.mean(qz_sfc_2D)
 
@@ -435,3 +441,64 @@ def SurfaceFlux_HeterogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
         ustar, qz_sfc_avg, TH_air_ref, psi2D_m, psi2D_m0, psi2D_h, psi2D_h0)
 
     return M_sfc_loc, ustar, qz_sfc_2D, qz_sfc_avg, invOB, MOSTfunctions
+
+
+# ============================================================
+#  optMoistureSurfBC = 2 : time-varying prescribed surface humidity
+# ============================================================
+
+@jax.jit
+def SurfaceMoistureFlux_HomogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions):
+    """
+    optMoistureSurfBC=2, optSurfFlux=0: diagnose surface moisture flux from
+    prescribed surface specific humidity (spatially homogeneous).
+    Uses the same MOST stability functions as heat
+    (turbulent Schmidt number = turbulent Prandtl number).
+
+    Parameters:
+    -----------
+    Q : jnp.ndarray (nx, ny, nz) — specific humidity (kg/kg)
+    ustar : jnp.ndarray (nx, ny) — friction velocity
+    Q_sfc_t : scalar — prescribed surface Q at current timestep (kg/kg)
+    MOSTfunctions : tuple of six (nx, ny) stability arrays
+
+    Returns:
+    --------
+    qm_sfc_2D : jnp.ndarray (nx, ny) — surface moisture flux w'q' (non-dim)
+    """
+    One2D = jnp.ones((nx, ny))
+    (_, _, psi2D_h, psi2D_h0, _, _) = MOSTfunctions
+
+    Q_air_avg = jnp.mean(Q[:, :, 0])
+    _z_ref_Q  = zMoisture if zMoisture > 0.0 else z0T
+    denom_qm  = jnp.log(0.5 * dz * z_scale / _z_ref_Q) + psi2D_h - psi2D_h0
+    qm_sfc_2D = ustar * vonk * (Q_sfc_t - Q_air_avg) * One2D / denom_qm
+
+    return qm_sfc_2D
+
+
+@jax.jit
+def SurfaceMoistureFlux_HeterogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions):
+    """
+    optMoistureSurfBC=2, optSurfFlux=1: per-column surface moisture flux from
+    prescribed surface specific humidity.
+
+    Parameters:
+    -----------
+    Q : jnp.ndarray (nx, ny, nz) — specific humidity (kg/kg)
+    ustar : jnp.ndarray (nx, ny) — friction velocity (per column)
+    Q_sfc_t : scalar — prescribed surface Q (kg/kg, spatially uniform)
+    MOSTfunctions : tuple of six (nx, ny) stability arrays
+
+    Returns:
+    --------
+    qm_sfc_2D : jnp.ndarray (nx, ny) — surface moisture flux (per column)
+    """
+    (_, _, psi2D_h, psi2D_h0, _, _) = MOSTfunctions
+
+    Q_air_loc = Q[:, :, 0]
+    _z_ref_Q  = zMoisture if zMoisture > 0.0 else z0T
+    denom_qm  = jnp.log(0.5 * dz * z_scale / _z_ref_Q) + psi2D_h - psi2D_h0
+    qm_sfc_2D = ustar * vonk * (Q_sfc_t - Q_air_loc) / denom_qm
+
+    return qm_sfc_2D

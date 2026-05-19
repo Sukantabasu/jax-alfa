@@ -18,7 +18,7 @@ File: ConfigLoader.py
 =====================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2026-05-01
 :Description: Loads run-specific configuration from JAXALFA_RUNDIR/Config.py.
@@ -72,6 +72,61 @@ if 'optSurfBC' not in dir():
     optSurfBC = 0
 if 'SurfaceBCFile' not in dir():
     SurfaceBCFile = 'input/SurfaceBC.npz'
+
+# Backward-compatible defaults for time/height-varying geostrophic wind
+# optGeoWind = 0: constant Ug2, Vg2 from Config (default, all existing cases)
+# optGeoWind = 1: time + height varying, loaded from GeoWindFile
+if 'optGeoWind' not in dir():
+    optGeoWind = 0
+if 'GeoWindFile' not in dir():
+    GeoWindFile = 'input/GeoWind.npz'
+
+# Backward-compatible default for screen-level temperature reference height.
+# zTemperature = 0  : use z0T as the thermal reference height (default, GABLS1/SBL)
+# zTemperature > 0  : use this height (m) as the reference for the heat-flux
+#                     denominator and psi_h0 — needed when the prescribed surface
+#                     temperature is observed at a screen height above z0T (e.g.
+#                     Wangara: temperature measured at 1.2 m above ground).
+if 'zTemperature' not in dir():
+    zTemperature = 0.0
+
+# Backward-compatible defaults for time/height-varying large-scale advection.
+# optAdvection = 0: no mesoscale advection forcing (default, all existing cases)
+# optAdvection = 1: time + height varying, loaded from AdvectionFile
+if 'optAdvection' not in dir():
+    optAdvection = 0
+if 'AdvectionFile' not in dir():
+    AdvectionFile = 'input/AdvForcing.npz'
+
+# Backward-compatible defaults for moisture.
+# optMoisture = 0: no moisture (default, all existing cases)
+# optMoisture = 1: specific humidity Q is a prognostic variable
+if 'optMoisture' not in dir():
+    optMoisture = 0
+# zMoisture: screen-level reference height for moisture flux denominator (m).
+#   0  : use z0T as the moisture reference height (same as heat)
+#   > 0: use this height (e.g. 0.25 m when surface Q observed at 0.25 m)
+if 'zMoisture' not in dir():
+    zMoisture = 0.0
+# MoistureFlux: constant surface moisture flux (kg/kg m/s), used when optMoistureSurfBC=0
+if 'MoistureFlux' not in dir():
+    MoistureFlux = 0.0
+# optMoistureSurfBC: 0 = constant flux (MoistureFlux)
+#                   1 = time-varying flux (from MoistureSurfaceBCFile)
+#                   2 = time-varying surface Q (from MoistureSurfaceBCFile)
+if 'optMoistureSurfBC' not in dir():
+    optMoistureSurfBC = 0
+if 'MoistureSurfaceBCFile' not in dir():
+    MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
+# q_inversion: specific humidity lapse rate above domain top (kg/kg/m).
+#   0 : zero gradient (flat Q profile at top, default)
+if 'q_inversion' not in dir():
+    q_inversion = 0.0
+
+# GPU_ID: which GPU to use when optGPU=1 (0-indexed).
+# Set to 1 in Config.py to run on the second GPU.
+if 'GPU_ID' not in dir():
+    GPU_ID = 0
 
 # Backward-compatible default for float precision
 if 'use_double_precision' not in dir():

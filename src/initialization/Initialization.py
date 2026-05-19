@@ -18,7 +18,7 @@ File: Initialization.py
 ==============================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
 :Description: loads velocity and temperature fields & reshape them
@@ -44,8 +44,11 @@ from ..utilities.Utilities import StagGridAvg
 
 InputDir = os.path.join(os.environ['JAXALFA_RUNDIR'], 'input')
 
-# Absolute path to the surface BC file (resolved once at import time)
-_SurfaceBCFile = os.path.join(os.environ['JAXALFA_RUNDIR'], SurfaceBCFile)
+# Absolute paths resolved once at import time
+_SurfaceBCFile        = os.path.join(os.environ['JAXALFA_RUNDIR'], SurfaceBCFile)
+_GeoWindFile          = os.path.join(os.environ['JAXALFA_RUNDIR'], GeoWindFile)
+_AdvectionFile        = os.path.join(os.environ['JAXALFA_RUNDIR'], AdvectionFile)
+_MoistureSurfaceBCFile = os.path.join(os.environ['JAXALFA_RUNDIR'], MoistureSurfaceBCFile)
 
 
 # ============================================================
@@ -159,17 +162,230 @@ def Initialize_SurfaceBC():
 
 def Initialize_GeoWind():
     """
+    Returns constant (nx, ny, nz) geostrophic wind arrays from Config scalars
+    Ug2, Vg2.  Used when optGeoWind == 0.
+    """
+    Ug = Ug2 * jnp.ones((nx, ny, nz)) / u_scale
+    Vg = Vg2 * jnp.ones((nx, ny, nz)) / u_scale
+    return Ug, Vg
+
+
+def Initialize_GeoWind_Varying():
+    """
+    Load the time- and height-varying geostrophic wind series from GeoWindFile.
+    Called once before the main loop when optGeoWind >= 1.
+
+    Validates that the file's dt_geo matches Config dt and that the series
+    dimensions match nsteps+1 and nz.
+
     Returns:
     --------
-    Ug, Vg : ndarray
-        3D arrays of size (nx, ny, nz) containing the initialized
-        geostrophic wind components
+    GeoWind_U, GeoWind_V : jnp.ndarray of shape (nsteps+1, nz)
+        Non-dimensional geostrophic wind profiles at every timestep.
+        Index [iteration-1] gives the profile for that iteration.
     """
 
-    Ug = Ug2*jnp.ones((nx, ny, nz))/u_scale
-    Vg = Vg2*jnp.ones((nx, ny, nz))/u_scale
+    data = np.load(_GeoWindFile)
 
-    return Ug, Vg
+    dt_geo_file = float(data['dt_geo'])
+    if abs(dt_geo_file - dt) > 1e-6:
+        raise ValueError(
+            f"GeoWind file dt_geo={dt_geo_file:.6f} s does not match "
+            f"Config dt={dt:.6f} s. Re-run CreateGeoWind with the current Config."
+        )
+
+    optGeoWind_file = int(data['optGeoWind'])
+    if optGeoWind_file != optGeoWind:
+        raise ValueError(
+            f"GeoWind file optGeoWind={optGeoWind_file} does not match "
+            f"Config optGeoWind={optGeoWind}. Re-run CreateGeoWind."
+        )
+
+    if 'Ug_series' in data and 'Vg_series' in data:
+        Ug_series = data['Ug_series']   # (nsteps+1, nz) dimensional m/s
+        Vg_series = data['Vg_series']   # (nsteps+1, nz) dimensional m/s
+
+        if Ug_series.shape[0] != nsteps + 1:
+            raise ValueError(
+                f"GeoWind series length {Ug_series.shape[0]} != nsteps+1={nsteps + 1}. "
+                f"Re-run CreateGeoWind with the current Config."
+            )
+        if Ug_series.shape[1] != nz:
+            raise ValueError(
+                f"GeoWind nz={Ug_series.shape[1]} != Config nz={nz}. "
+                f"Re-run CreateGeoWind with the current Config."
+            )
+    else:
+        t_profile = data['t_profile']       # (ntimes,) seconds
+        Ug_profile = data['Ug_profile']     # (ntimes, nz) dimensional m/s
+        Vg_profile = data['Vg_profile']     # (ntimes, nz) dimensional m/s
+
+        if Ug_profile.shape[1] != nz:
+            raise ValueError(
+                f"GeoWind nz={Ug_profile.shape[1]} != Config nz={nz}. "
+                f"Re-run CreateGeoWind with the current Config."
+            )
+
+        t_target = np.arange(nsteps + 1) * dt
+        if t_target[0] < t_profile[0] - 1e-6 or t_target[-1] > t_profile[-1] + 1e-6:
+            raise ValueError(
+                "GeoWind compact profiles do not cover the configured simulation "
+                f"interval 0-{t_target[-1]:.1f} s. Re-run CreateGeoWind."
+            )
+
+        Ug_series = np.zeros((nsteps + 1, nz))
+        Vg_series = np.zeros((nsteps + 1, nz))
+        for k in range(nz):
+            Ug_series[:, k] = np.interp(t_target, t_profile, Ug_profile[:, k])
+            Vg_series[:, k] = np.interp(t_target, t_profile, Vg_profile[:, k])
+
+    # Non-dimensionalise (u_scale = 1 in current JAX-ALFA, kept for generality)
+    GeoWind_U = jnp.array(Ug_series / u_scale)
+    GeoWind_V = jnp.array(Vg_series / u_scale)
+
+    return GeoWind_U, GeoWind_V
+
+
+# ============================================================
+# Large-scale (mesoscale) advection forcing
+# ============================================================
+
+def Initialize_AdvForcing():
+    """
+    Load the time- and height-varying large-scale advection forcing from
+    AdvectionFile.  Called once before the main loop when optAdvection >= 1.
+
+    The .npz file must contain:
+        Uadv_series  : (nsteps+1, nz)  dimensional  [m s⁻²]
+        Vadv_series  : (nsteps+1, nz)  dimensional  [m s⁻²]
+        THadv_series : (nsteps+1, nz)  dimensional  [K s⁻¹]   (optional)
+        Qadv_series  : (nsteps+1, nz)  dimensional  [kg/kg s⁻¹] (optional)
+        dt_adv       : float           [s]  — must equal Config dt
+        optAdvection : int32
+
+    Returns:
+    --------
+    AdvForcing_U, AdvForcing_V, AdvForcing_TH, AdvForcing_Q :
+        jnp.ndarray of shape (nsteps+1, nz)
+        Non-dimensional advection tendencies at every timestep.
+        Missing series default to zero.
+        Non-dimensionalisation: [m s⁻²] × z_scale  (u_scale = TH_scale = Q_scale = 1).
+    """
+
+    data = np.load(_AdvectionFile)
+
+    dt_adv_file = float(data['dt_adv'])
+    if abs(dt_adv_file - dt) > 1e-6:
+        raise ValueError(
+            f"AdvForcing file dt_adv={dt_adv_file:.6f} s does not match "
+            f"Config dt={dt:.6f} s. Re-run CreateAdvForcing with the current Config."
+        )
+
+    optAdvection_file = int(data['optAdvection'])
+    if optAdvection_file != optAdvection:
+        raise ValueError(
+            f"AdvForcing file optAdvection={optAdvection_file} does not match "
+            f"Config optAdvection={optAdvection}. Re-run CreateAdvForcing."
+        )
+
+    Uadv_series = data['Uadv_series']   # (nsteps+1, nz)  [m/s^2]
+    Vadv_series = data['Vadv_series']   # (nsteps+1, nz)  [m/s^2]
+
+    if Uadv_series.shape[0] != nsteps + 1:
+        raise ValueError(
+            f"AdvForcing series length {Uadv_series.shape[0]} != nsteps+1={nsteps + 1}. "
+            f"Re-run CreateAdvForcing with the current Config."
+        )
+    if Uadv_series.shape[1] != nz:
+        raise ValueError(
+            f"AdvForcing nz={Uadv_series.shape[1]} != Config nz={nz}. "
+            f"Re-run CreateAdvForcing with the current Config."
+        )
+
+    # Nondimensionalise: [m/s^2] * z_scale / u_scale^2  (u_scale = 1)
+    AdvForcing_U  = jnp.array(Uadv_series * z_scale / u_scale ** 2)
+    AdvForcing_V  = jnp.array(Vadv_series * z_scale / u_scale ** 2)
+
+    if 'THadv_series' in data:
+        THadv_series = data['THadv_series']   # (nsteps+1, nz)  [K/s]
+        # Nondimensionalise: [K/s] * z_scale / (u_scale * TH_scale)  (both = 1)
+        AdvForcing_TH = jnp.array(THadv_series * z_scale / (u_scale * TH_scale))
+    else:
+        AdvForcing_TH = jnp.zeros((nsteps + 1, nz))
+
+    if 'Qadv_series' in data:
+        Qadv_series = data['Qadv_series']   # (nsteps+1, nz)  [kg/kg/s]
+        # Nondimensionalise: [kg/kg/s] * z_scale / (u_scale * Q_scale)  (both = 1)
+        AdvForcing_Q = jnp.array(Qadv_series * z_scale / (u_scale * Q_scale))
+    else:
+        AdvForcing_Q = jnp.zeros((nsteps + 1, nz))
+
+    return AdvForcing_U, AdvForcing_V, AdvForcing_TH, AdvForcing_Q
+
+
+# ============================================================
+# Moisture field
+# ============================================================
+
+def Initialize_Q():
+    """
+    Load the initial specific humidity field from input/Q.ini.
+    Q is stored as absolute values (kg/kg) — no base-state subtraction.
+
+    Returns:
+    --------
+    Q : jnp.ndarray of shape (nx, ny, nz)  [kg/kg]
+    """
+    InputQ = os.path.join(InputDir, 'Q.ini')
+    Q = np.loadtxt(InputQ)
+    Q = np.reshape(Q, (nx, ny, nz), order='F')
+    return jnp.array(Q)
+
+
+def Initialize_MoistureSurfaceBC():
+    """
+    Load the time-varying moisture surface BC series from MoistureSurfaceBCFile.
+    Called once before the main loop when optMoisture=1 and optMoistureSurfBC >= 1.
+
+    Returns:
+    --------
+    MoistureSurfaceBC_series : jnp.ndarray of shape (nsteps+1,)
+        Non-dimensional values at every timestep.
+        For optMoistureSurfBC=1: non-dim moisture flux = data / (u_scale * Q_scale)
+        For optMoistureSurfBC=2: surface Q in kg/kg (stored as-is, already dimensional)
+    """
+    data = np.load(_MoistureSurfaceBCFile)
+
+    dt_moist_file = float(data['dt_moist'])
+    if abs(dt_moist_file - dt) > 1e-6:
+        raise ValueError(
+            f"MoistureSurfaceBC file dt_moist={dt_moist_file:.6f} s does not match "
+            f"Config dt={dt:.6f} s. Re-run CreateMoistureSurfaceBC with the current Config."
+        )
+
+    optMoistureSurfBC_file = int(data['optMoistureSurfBC'])
+    if optMoistureSurfBC_file != optMoistureSurfBC:
+        raise ValueError(
+            f"MoistureSurfaceBC file optMoistureSurfBC={optMoistureSurfBC_file} does not match "
+            f"Config optMoistureSurfBC={optMoistureSurfBC}. Re-run CreateMoistureSurfaceBC."
+        )
+
+    series = data['data_series']
+    expected_len = nsteps + 1
+    if len(series) != expected_len:
+        raise ValueError(
+            f"MoistureSurfaceBC series length {len(series)} != nsteps+1={expected_len}. "
+            f"Re-run CreateMoistureSurfaceBC with the current Config."
+        )
+
+    if optMoistureSurfBC == 1:
+        # Flux in kg/kg m/s; non-dimensionalise by u_scale * Q_scale
+        series_nondim = series / (u_scale * Q_scale)
+    else:
+        # optMoistureSurfBC == 2: surface Q (kg/kg); store as-is
+        series_nondim = series
+
+    return jnp.array(series_nondim)
 
 
 # ============================================================

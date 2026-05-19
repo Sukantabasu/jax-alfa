@@ -18,7 +18,7 @@ File: SCL_AllTerms.py
 ======================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-29
 :Description: computes all the right hand side terms of scalar equations
@@ -45,7 +45,7 @@ from ..utilities.Utilities import PlanarMean
 # ============================================================
 
 @jax.jit
-def RHS_Scalar(TH, THAdvectionSum, divq, RayleighDampCoeff_stag):
+def RHS_Scalar(TH, THAdvectionSum, divq, RayleighDampCoeff_stag, THadv):
     """
     Computes the right-hand side terms for the scalar transport equation.
 
@@ -55,6 +55,9 @@ def RHS_Scalar(TH, THAdvectionSum, divq, RayleighDampCoeff_stag):
         Sum of advection terms for potential temperature
     divq : ndarray of shape (nx, ny, nz)
         Divergence of subgrid-scale scalar flux
+    THadv : ndarray of shape (nx, ny, nz)
+        Non-dimensional large-scale (mesoscale) advection tendency for potential
+        temperature.  Pass ZeRo3D when optAdvection == 0.
 
     Returns:
     --------
@@ -63,6 +66,9 @@ def RHS_Scalar(TH, THAdvectionSum, divq, RayleighDampCoeff_stag):
     """
 
     RHS_TH = - THAdvectionSum - divq
+
+    if optAdvection >= 1:
+        RHS_TH = RHS_TH + THadv
 
     if optDamping == 1:
         # Compute mean potential temperature at each vertical level
@@ -74,3 +80,31 @@ def RHS_Scalar(TH, THAdvectionSum, divq, RayleighDampCoeff_stag):
         RHS_TH = RHS_TH - RayleighDampCoeff_stag * TH_fluc
 
     return RHS_TH
+
+
+@jax.jit
+def RHS_Moisture(Q, QAdvectionSum, divqm, RayleighDampCoeff_stag, Qadv):
+    """
+    Right-hand side for the specific humidity (Q) transport equation.
+
+    Parameters:
+    -----------
+    Q : ndarray (nx, ny, nz) — specific humidity (kg/kg)
+    QAdvectionSum : ndarray (nx, ny, nz) — advection sum for Q
+    divqm : ndarray (nx, ny, nz) — divergence of SGS moisture flux
+    RayleighDampCoeff_stag : ndarray (nx, ny, nz) — Rayleigh damping coefficients
+    Qadv : ndarray (nx, ny, nz) — large-scale moisture advection tendency
+                                   (ZeRo3D when no explicit forcing is prescribed)
+
+    Returns:
+    --------
+    RHS_Q : ndarray (nx, ny, nz)
+    """
+    RHS_Q = - QAdvectionSum - divqm + Qadv
+
+    if optDamping == 1:
+        Q_bar  = PlanarMean(Q)
+        Q_fluc = Q - Q_bar.reshape(1, 1, -1)
+        RHS_Q  = RHS_Q - RayleighDampCoeff_stag * Q_fluc
+
+    return RHS_Q

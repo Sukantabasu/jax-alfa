@@ -18,7 +18,7 @@ File: SCL_TimeAdvancement.py
 =============================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-29
 :Description: implements Adams-Bashforth (AB2) for time integration
@@ -69,3 +69,31 @@ def AB2_TH(TH,
     )
 
     return TH_new
+
+
+# ============================================================
+#  Time advancement for specific humidity
+# ============================================================
+
+@jax.jit
+def AB2_Q(Q,
+          RHS_Q, RHS_Q_previous):
+    """
+    Parameters:
+    -----------
+    Q : ndarray (nx, ny, nz) — current specific humidity (kg/kg)
+    RHS_Q : ndarray (nx, ny, nz) — current RHS for Q
+    RHS_Q_previous : ndarray (nx, ny, nz) — previous RHS for Q
+
+    Returns:
+    --------
+    Q_new : ndarray (nx, ny, nz) — updated specific humidity
+    """
+    Q_new = Q + dt_nondim * (1.5 * RHS_Q - 0.5 * RHS_Q_previous)
+
+    # Top BC: apply free-atmosphere Q gradient (default q_inversion=0: zero gradient)
+    Q_new = Q_new.at[:, :, nz - 1].set(
+        Q_new[:, :, nz - 2] + q_inversion_nondim * dz
+    )
+
+    return Q_new

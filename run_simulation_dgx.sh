@@ -72,8 +72,16 @@ fi
 # ============================================================
 
 echo "Generating input files..."
-python $JAXALFA_RUNDIR/CreateInputs*.py
+for f in "$JAXALFA_RUNDIR"/CreateInputs*.py; do
+    [ -f "$f" ] && python "$f"
+done
 for f in "$JAXALFA_RUNDIR"/CreateSurfaceBC*.py; do
+    [ -f "$f" ] && python "$f"
+done
+for f in "$JAXALFA_RUNDIR"/CreateGeoWind*.py; do
+    [ -f "$f" ] && python "$f"
+done
+for f in "$JAXALFA_RUNDIR"/CreateAdvForcing*.py; do
     [ -f "$f" ] && python "$f"
 done
 

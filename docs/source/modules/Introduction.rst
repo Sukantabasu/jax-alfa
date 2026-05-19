@@ -14,5 +14,7 @@ Features
 - Finite difference methods for vertical derivatives
 - FFT-based direct Poisson solver
 - Dynamic SGS coefficient computation
+- Prognostic potential temperature and specific humidity scalars
+- Virtual potential temperature buoyancy coupling
 - JAX-accelerated computations for CPUs & GPUs
 - Either single or double precision computations

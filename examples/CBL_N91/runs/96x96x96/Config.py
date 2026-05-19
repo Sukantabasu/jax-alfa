@@ -42,6 +42,7 @@ import numpy as np
 use_double_precision = True
 # 0: use CPU, 1: use GPU
 optGPU = 1
+GPU_ID = 0
 
 # ------------------------------------------------------------
 # Domain configuration

@@ -18,7 +18,7 @@ File: NSE_SGSTerms.py
 ===========================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-6
 :Description: computes the SGS stress divergence terms

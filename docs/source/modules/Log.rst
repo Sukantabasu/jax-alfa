@@ -1,6 +1,72 @@
 Change Log
 ==========
 
+JAX-ALFA 0.1.2 (May 19, 2026)
+------------------------------
+
+* New Features
+
+  * **Prognostic specific humidity** (``optMoisture``, ``optMoistureSurfBC``):
+    specific humidity *Q* is now a fully coupled prognostic scalar — transport,
+    surface boundary condition (constant flux, time-varying flux, or
+    time-varying prescribed *Q*), large-scale moisture advection
+    (``optAdvection``), and Rayleigh damping all support *Q*.
+
+  * **Virtual potential temperature buoyancy** (``BuoyancyOpt1``,
+    ``BuoyancyOpt2``): buoyancy now uses
+    *θ*\ :sub:`v` = (*θ* + *T*\ :sub:`0`) × (1 + 0.61 *Q*) so that
+    the moisture loading term is *O*(2 K), not *O*(0 K).
+
+  * **GABLS3 case study** (``examples/SBL_GABLS3``): complete 128\ :sup:`3`
+    configuration with time- and height-varying geostrophic winds, temperature
+    and moisture large-scale advection, and observed 0.25 m surface temperature
+    and humidity boundary conditions.  Input generation scripts
+    (``CreateInputs_GABLS3.py``, ``CreateSurfaceBC_GABLS3.py``,
+    ``CreateGeoWind_GABLS3.py``, ``CreateAdvForcing_GABLS3.py``) are included.
+
+  * **Time–height diagnostic notebook** for GABLS3
+    (``SBL_GABLS3_TimeHeight.ipynb``): wind speed, potential temperature,
+    specific humidity, velocity variances, and turbulent flux profiles over the
+    9-hour simulation window.
+
+  * **GPU selection** (``GPU_ID`` in ``Config.py``): each run directory can
+    now specify which GPU to use on a multi-GPU workstation.  On SLURM clusters
+    the environment variable ``CUDA_VISIBLE_DEVICES`` set by the scheduler
+    takes precedence automatically.
+
+-------
+
+* Bug Fixes
+
+  * Fixed ``BuoyancyOpt2`` denominator: was dividing by
+    *θ*\ :sub:`v,bar` + *T*\ :sub:`0`; now divides by *θ*\ :sub:`v,bar`
+    directly (which already carries absolute temperature magnitude).
+
+  * Fixed large-scale advection jump timing in ``CreateAdvForcing`` scripts:
+    the "before-jump" time was offset one step too late (``t_jump + ε``);
+    corrected to ``t_jump − ε``.
+
+  * Fixed latent ``NameError``: ``Initialize_AdvForcing`` was missing from
+    ``Imports.py``; any run with ``optAdvection ≥ 1`` would crash at startup.
+
+  * Fixed ``run_simulation.sh`` and ``run_simulation_dgx.sh``: input-generation
+    scripts (``CreateGeoWind*``, ``CreateAdvForcing*``) were not executed before
+    the main solver; they are now run in the correct order.
+
+-------
+
+* Changes
+
+  * ``Initialize_AdvForcing()`` now returns a 4-tuple
+    ``(AdvForcing_U, AdvForcing_V, AdvForcing_TH, AdvForcing_Q)``.
+    If ``Qadv_series`` is absent from the ``.npz`` file, *Q* advection
+    silently defaults to zero (backward-compatible with dry runs).
+
+  * ``ConfigLoader.py``: added backward-compatible default ``GPU_ID = 0`` so
+    existing ``Config.py`` files that omit the key do not crash.
+
+-------
+
 JAX-ALFA 0.1.1 (May 10, 2025)
 ------------------------------
 

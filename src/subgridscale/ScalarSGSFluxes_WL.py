@@ -18,7 +18,7 @@ File: ScalarSGSFluxes_WL.py
 ============================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2026-5-9
 :Description: computes SGS scalar fluxes using the Wong-Lilly (1994)

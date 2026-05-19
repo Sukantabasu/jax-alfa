@@ -18,7 +18,7 @@ File: Imports.py
 =======================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
 :Description: imports all the modules for JAXLES
@@ -35,8 +35,14 @@ if Config.optGPU == 0:
     os.environ["XLA_FLAGS"] = "--xla_cpu_multi_thread_eigen=true"
     print("JAX environment configured for CPU")
 else:
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
-    print("JAX environment configured for GPU")
+    if "CUDA_VISIBLE_DEVICES" not in os.environ:
+        # Local run: honour GPU_ID from Config
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(Config.GPU_ID)
+        print(f"JAX environment configured for GPU {Config.GPU_ID}")
+    else:
+        # Cluster run: SLURM already set CUDA_VISIBLE_DEVICES; don't override
+        print(f"JAX environment configured for GPU "
+              f"(CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']})")
 
 import jax
 
@@ -63,9 +69,13 @@ def ImportLES():
 
     # Imports from initialization
     from ..initialization.Initialization import Initialize_uvw, Initialize_TH
+    from ..initialization.Initialization import Initialize_Q
+    from ..initialization.Initialization import Initialize_MoistureSurfaceBC
     from ..initialization.Initialization import Initialize_GeoWind
+    from ..initialization.Initialization import Initialize_GeoWind_Varying
     from ..initialization.Initialization import Initialize_RayleighDampingLayer
     from ..initialization.Initialization import Initialize_SurfaceBC
+    from ..initialization.Initialization import Initialize_AdvForcing
     from ..initialization.Preprocess import Wavenumber, Constant
     from ..initialization.Preprocess import ZeRo3DIni, ZeRo2DIni, ZeRo1DIni
     from ..initialization.Preprocess import ZeRo3D_padIni, ZeRo3D_fftIni, ZeRo3D_pad_fftIni
@@ -73,6 +83,7 @@ def ImportLES():
     # Imports from operations
     from ..operations.Derivatives import Derivxy, Derivz_M, velocityGradients
     from ..operations.Derivatives import Derivz_TH, potentialTemperatureGradients
+    from ..operations.Derivatives import moistureGradients
     from ..operations.Derivatives import Derivz_Generic_uvp, Derivz_Generic_w
     from ..operations.FFT import FFT, FFT_pad
     from ..operations.Filtering import Filtering_Explicit, Filtering_Level1, Filtering_Level2
@@ -113,6 +124,8 @@ def ImportLES():
     from ..surface.SurfaceFlux import SurfaceFlux_HeterogeneousVaryingFlux
     from ..surface.SurfaceFlux import SurfaceFlux_HomogeneousPrescribedTemperature
     from ..surface.SurfaceFlux import SurfaceFlux_HeterogeneousPrescribedTemperature
+    from ..surface.SurfaceFlux import SurfaceMoistureFlux_HomogeneousPrescribedQ
+    from ..surface.SurfaceFlux import SurfaceMoistureFlux_HeterogeneousPrescribedQ
 
     # Imports from pde
     from ..pde.NSE_AdvectionTerms import Advection
@@ -123,9 +136,9 @@ def ImportLES():
     from ..pde.NSE_SGSTerms import DivStressStaticSGS, DivStressDynamicSGS
     from ..pde.SCL_SGSTerms import DivFluxStaticSGS, DivFluxDynamicSGS
     from ..pde.NSE_AllTerms import RHS_Momentum
-    from ..pde.SCL_AllTerms import RHS_Scalar
+    from ..pde.SCL_AllTerms import RHS_Scalar, RHS_Moisture
     from ..pde.NSE_TimeAdvancement import AB2_uvw
-    from ..pde.SCL_TimeAdvancement import AB2_TH
+    from ..pde.SCL_TimeAdvancement import AB2_TH, AB2_Q
 
     # Add all imports to namespace
     for name, value in locals().items():

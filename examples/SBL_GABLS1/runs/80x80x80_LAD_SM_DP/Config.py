@@ -44,6 +44,7 @@ import numpy as np
 use_double_precision = True
 # 0: use CPU, 1: use GPU
 optGPU = 1
+GPU_ID = 0
 
 # ------------------------------------------------------------
 # Domain configuration
@@ -110,7 +111,7 @@ f_coriolis = 1.39e-4  # unit: 1/s
 inversion = 0.01
 
 # Buoyancy calculation: 1 = use fixed T_0
-optBuoyancy = 1
+optBuoyancy = 2
 
 # Reference temperature (K) — initial surface temperature
 T_0 = 265.0

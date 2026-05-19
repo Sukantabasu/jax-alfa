@@ -18,7 +18,7 @@ File: NSE_AllTerms.py
 ========================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
 :Description: computes all the right hand side terms of NSE
@@ -50,7 +50,8 @@ def RHS_Momentum(u, v, w,
                  Cx, Cy, Cz,
                  buoyancy,
                  divtx, divty, divtz,
-                 RayleighDampCoeff, RayleighDampCoeff_stag):
+                 RayleighDampCoeff, RayleighDampCoeff_stag,
+                 Uadv, Vadv):
     """
     Parameters:
     -----------
@@ -64,6 +65,9 @@ def RHS_Momentum(u, v, w,
         Buoyancy term
     divtx, divty, divtz : ndarray of shape (nx, ny, nz)
         SGS stress divergence terms
+    Uadv, Vadv : ndarray of shape (nx, ny, nz)
+        Non-dimensional large-scale (mesoscale) advection tendencies for u and v.
+        Pass ZeRo3D when optAdvection == 0.
 
     Returns:
     --------
@@ -78,6 +82,10 @@ def RHS_Momentum(u, v, w,
     RHS_u = - Cx - divtx - f_coriolis_nondim * (Vg - v)
     RHS_v = - Cy - divty + f_coriolis_nondim * (Ug - Ugal - u)
     RHS_w = - Cz - divtz + buoyancy
+
+    if optAdvection >= 1:
+        RHS_u = RHS_u + Uadv
+        RHS_v = RHS_v + Vadv
 
     if optDamping == 1:
 

@@ -18,7 +18,7 @@ File: NSE_BuoyancyTerms.py
 ==========================
 
 :Author: Sukanta Basu
-:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+:AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-4
 :Description: computes the buoyancy term for use in the momentum equation
@@ -69,8 +69,9 @@ def BuoyancyOpt1(TH, H, ZeRo3D):
     # Initialize arrays with zeros
     buoyancy = ZeRo3D.copy()
 
-    # Compute virtual potential temperature
-    THv = TH * (1 + 0.61 * H)
+    # TH is stored as anomaly (TH - T_0); use absolute temperature so that
+    # the moisture term 0.61*Q*T_0 is O(~2 K) not O(~0 K).
+    THv = (TH + T_0_nondim) * (1 + 0.61 * H)
 
     # Compute planar-averaged virtual potential temperature
     THv_bar = PlanarMean(THv)
@@ -122,8 +123,9 @@ def BuoyancyOpt2(TH, H, ZeRo3D):
     # Initialize arrays with zeros
     buoyancy = ZeRo3D.copy()
 
-    # Compute virtual potential temperature
-    THv = TH * (1 + 0.61 * H)
+    # TH is stored as anomaly (TH - T_0); use absolute temperature so that
+    # the moisture term 0.61*Q*T_0 is O(~2 K) not O(~0 K).
+    THv = (TH + T_0_nondim) * (1 + 0.61 * H)
 
     # Compute plane-averaged virtual potential temperature
     THv_bar = PlanarMean(THv)
@@ -131,8 +133,8 @@ def BuoyancyOpt2(TH, H, ZeRo3D):
     # Reshape THv_bar for broadcasting
     THv_bar_3D = THv_bar.reshape(1, 1, -1)
 
-    # TH is anomaly so THv_bar is ~0; add T_0 to get absolute denominator.
-    THv_normalized = (THv - THv_bar_3D) / (THv_bar_3D + T_0_nondim)
+    # THv_bar is already ~T_0_nondim*(1+0.61*<Q>), so use it directly.
+    THv_normalized = (THv - THv_bar_3D) / THv_bar_3D
 
     # Compute the half-level averages for all levels
     above = THv_normalized[:, :, 1:nz]

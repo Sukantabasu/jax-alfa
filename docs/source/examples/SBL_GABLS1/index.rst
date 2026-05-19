@@ -14,6 +14,6 @@ post-processing the packaged 100\ :sup:`3` LASDD-SM run, see the :doc:`Tutorial
    :maxdepth: 1
    :caption: Sensitivity Studies
 
-   notebooks/SBL_GABLS1_ResolutionSensitivity
-   notebooks/SBL_GABLS1_PrecisionSensitivity
-   notebooks/SBL_GABLS1_SGSModelSensitivity
+   Resolution Sensitivity <notebooks/SBL_GABLS1_ResolutionSensitivity>
+   Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>
+   SGS Model Sensitivity <notebooks/SBL_GABLS1_SGSModelSensitivity>

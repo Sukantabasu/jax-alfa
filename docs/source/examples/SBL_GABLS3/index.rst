@@ -13,4 +13,4 @@ humidity field driven by observed 0.25 m surface temperature and humidity
    :maxdepth: 1
    :caption: Diagnostics
 
-   notebooks/SBL_GABLS3_TimeHeight
+   Time–Height Diagnostics <notebooks/SBL_GABLS3_TimeHeight>

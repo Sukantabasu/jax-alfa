@@ -12,7 +12,6 @@ post-processing the packaged 100\ :sup:`3` LASDD-SM run, see the :doc:`Tutorial
 
 .. toctree::
    :maxdepth: 1
-   :caption: Sensitivity Studies
 
    Resolution Sensitivity <notebooks/SBL_GABLS1_ResolutionSensitivity>
    Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>

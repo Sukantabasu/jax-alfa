@@ -11,6 +11,5 @@ humidity field driven by observed 0.25 m surface temperature and humidity
 
 .. toctree::
    :maxdepth: 1
-   :caption: Diagnostics
 
    Time–Height Diagnostics <notebooks/SBL_GABLS3_TimeHeight>

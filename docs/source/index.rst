@@ -50,7 +50,7 @@ Requirements
    :maxdepth: 1
    :caption: Tutorial
 
-   GABLS1: LASDD-SM <tutorial/Tutorial_notebook>
+   GABLS1 <tutorial/Tutorial_notebook>
 
 .. toctree::
    :maxdepth: 1

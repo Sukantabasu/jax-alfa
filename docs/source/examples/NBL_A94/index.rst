@@ -4,6 +4,7 @@ Neutral BL
 
 .. toctree::
    :maxdepth: 1
+   :caption: Notebooks
 
    Description <notebooks/NBL_A94_Description>
    Horizontal Cross-Sections <notebooks/NBL_A94_HorizontalCrossSections>

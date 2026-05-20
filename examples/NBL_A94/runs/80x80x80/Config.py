@@ -154,3 +154,42 @@ SampleInterval_sec = 10.0 # ideally, should be divisible by dt
 OutputInterval_sec = 60.0 # ideally, should be divisible by dt
 # Output 3D fields every Output3DInterval_sec (sec)
 Output3DInterval_sec = 10*3600.0 # ideally, should be divisible by dt
+
+# ------------------------------------------------------------
+# Surface BC configuration
+# ------------------------------------------------------------
+# 0: constant flux (SensibleHeatFlux), 1: time-varying flux, 2: time-varying surface T
+optSurfBC = 0
+SurfaceBCFile = 'input/SurfaceBC.npz'
+
+# Screen-level temperature reference height (m); 0 = use z0T
+zTemperature = 0.0
+
+# ------------------------------------------------------------
+# Geostrophic wind configuration
+# ------------------------------------------------------------
+# 0: constant (Ug2, Vg2 above), 1: time/height-varying (from GeoWindFile)
+optGeoWind = 0
+GeoWindFile = 'input/GeoWind.npz'
+
+# ------------------------------------------------------------
+# Large-scale advection forcing
+# ------------------------------------------------------------
+# 0: none, 1: time/height-varying (from AdvectionFile)
+optAdvection = 0
+AdvectionFile = 'input/AdvForcing.npz'
+
+# ------------------------------------------------------------
+# Moisture configuration
+# ------------------------------------------------------------
+# 0: dry run, 1: prognostic specific humidity Q
+optMoisture = 0
+# Screen-level moisture reference height (m); 0 = use z0T
+zMoisture = 0.0
+# Surface moisture flux (kg/kg m/s); used when optMoistureSurfBC = 0
+MoistureFlux = 0.0
+# 0: constant flux, 1: time-varying flux, 2: time-varying surface Q
+optMoistureSurfBC = 0
+MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
+# Specific humidity lapse rate above domain top (kg/kg/m); 0 = zero gradient
+q_inversion = 0.0

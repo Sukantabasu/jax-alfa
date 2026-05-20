@@ -126,7 +126,7 @@ f_coriolis = -8.26e-5  # unit: 1/s
 # Temperature inversion: 0 = no prescribed inversion (diurnal cycle case)
 inversion = 0.0
 
-# Buoyancy calculation: 1 = use fixed T_0
+# Buoyancy calculation: 0 = use reference T_0, 1 = use local THv
 optBuoyancy = 1
 
 # Reference temperature (K) — screen-level potential temperature at t=0
@@ -167,3 +167,25 @@ RelaxTime  = 600.0   # unit: s
 SampleInterval_sec   = 10.0       # collect a sample every 10 s
 OutputInterval_sec   = 60.0       # output averaged stats every 60 s
 Output3DInterval_sec = 24*3600.0  # output 3D fields at the end of the run
+
+# ------------------------------------------------------------
+# Large-scale advection forcing
+# ------------------------------------------------------------
+# 0: none, 1: time/height-varying (from AdvectionFile)
+optAdvection = 0
+AdvectionFile = 'input/AdvForcing.npz'
+
+# ------------------------------------------------------------
+# Moisture configuration
+# ------------------------------------------------------------
+# 0: dry run, 1: prognostic specific humidity Q
+optMoisture = 0
+# Screen-level moisture reference height (m); 0 = use z0T
+zMoisture = 0.0
+# Surface moisture flux (kg/kg m/s); used when optMoistureSurfBC = 0
+MoistureFlux = 0.0
+# 0: constant flux, 1: time-varying flux, 2: time-varying surface Q
+optMoistureSurfBC = 0
+MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
+# Specific humidity lapse rate above domain top (kg/kg/m); 0 = zero gradient
+q_inversion = 0.0

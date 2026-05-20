@@ -159,7 +159,7 @@ f_coriolis = 1.149e-4   # unit: 1/s
 # Potential temperature lapse rate above domain top (K/m)
 inversion = 0.0029
 
-# Buoyancy calculation: 2 = use local mean temperature
+# Buoyancy calculation: 0 = use reference T_0, 1 = use local mean THv
 optBuoyancy = 1
 
 # Reference temperature (K)

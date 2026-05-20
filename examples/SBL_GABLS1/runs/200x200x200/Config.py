@@ -110,7 +110,7 @@ f_coriolis = 1.39e-4  # unit: 1/s
 # Temperature inversion above 100 m (K/m)
 inversion = 0.01
 
-# Buoyancy calculation: 1 = use fixed T_0
+# Buoyancy calculation: 0 = use reference T_0, 1 = use local THv
 optBuoyancy = 1
 
 # Reference temperature (K) — initial surface temperature
@@ -150,3 +150,35 @@ RelaxTime  = 60.0   # unit: s
 SampleInterval_sec   = 10.0    # collect a sample every 10 s
 OutputInterval_sec   = 60.0    # output averaged stats every 1 min
 Output3DInterval_sec = 3600.0  # output 3D fields every 1 hour
+
+# Screen-level temperature reference height (m); 0 = use z0T
+zTemperature = 0.0
+
+# ------------------------------------------------------------
+# Geostrophic wind configuration
+# ------------------------------------------------------------
+# 0: constant (Ug2, Vg2 above), 1: time/height-varying (from GeoWindFile)
+optGeoWind = 0
+GeoWindFile = 'input/GeoWind.npz'
+
+# ------------------------------------------------------------
+# Large-scale advection forcing
+# ------------------------------------------------------------
+# 0: none, 1: time/height-varying (from AdvectionFile)
+optAdvection = 0
+AdvectionFile = 'input/AdvForcing.npz'
+
+# ------------------------------------------------------------
+# Moisture configuration
+# ------------------------------------------------------------
+# 0: dry run, 1: prognostic specific humidity Q
+optMoisture = 0
+# Screen-level moisture reference height (m); 0 = use z0T
+zMoisture = 0.0
+# Surface moisture flux (kg/kg m/s); used when optMoistureSurfBC = 0
+MoistureFlux = 0.0
+# 0: constant flux, 1: time-varying flux, 2: time-varying surface Q
+optMoistureSurfBC = 0
+MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
+# Specific humidity lapse rate above domain top (kg/kg/m); 0 = zero gradient
+q_inversion = 0.0

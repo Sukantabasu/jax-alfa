@@ -15,18 +15,17 @@
 
 """
 File: Config.py
-=======================
+===============
 
 :Author: Sukanta Basu
-:Date: 2026-05-19
-:Description: Namelist for the GABLS3 intercomparison case.
-              Reference: Basu (2008), GABLS3 LES Intercomparison Case Description.
-              Location: Cabauw, Netherlands (51.97 N, 4.93 E).
-              Domain 800x800x800 m, 128^3 grid, 9-hour simulation.
-              Simulation period: 00 UTC to 09 UTC, 2 July 2006.
-              Surface BC: observed 0.25 m potential temperature (zTemperature=0.25).
-              Geostrophic wind: time- and height-varying (optGeoWind=1).
-              Large-scale advection: time- and height-varying (optAdvection=1).
+:AI Assistance: Claude.AI (Anthropic) is used for documentation,
+                code restructuring, and performance optimization
+:Date: 2026-05-20
+:Description: GABLS3 stable BL after Bosveld et al. (2020).
+              Cabauw, Netherlands; 00-09 UTC 2 July 2006.
+              Domain 800x800x800 m; moisture-active.
+              Grid: 128x128x128, SGS: LASDD-SM,
+              Precision: single.
 """
 
 
@@ -71,8 +70,8 @@ nz = 128
 istep = 1
 
 # Time stepping and simulation time
-dt = 0.1           # unit: sec
-SimTime = 32400    # 9 hours (00–09 UTC 2 July 2006), unit: sec
+dt = 0.1          # unit: sec
+SimTime = 32400   # unit: sec
 
 # Galilean transformation (m/s)
 Ugal = 0
@@ -91,10 +90,9 @@ optSurfBC = 2
 
 # Roughness lengths (m)
 z0m = 0.15
-z0T = 0.15   # not used when zTemperature > 0; kept for backward compatibility
+z0T = 0.15
 
-# Screen-level temperature reference height (m).
-# GABLS3 surface temperature observed at 0.25 m above ground.
+# Screen-level temperature reference height (m); 0 = use z0T
 zTemperature = 0.25
 
 # SensibleHeatFlux: not used when optSurfBC >= 1; set to 0 as placeholder
@@ -102,31 +100,6 @@ SensibleHeatFlux = 0.0  # K m/s
 
 # Path to surface BC file (relative to run directory)
 SurfaceBCFile = 'input/SurfaceBC.npz'
-
-# ------------------------------------------------------------
-# Moisture configuration
-# ------------------------------------------------------------
-
-# optMoisture: 0 = dry run, 1 = specific humidity Q is prognostic
-optMoisture = 1
-
-# optMoistureSurfBC: 2 = time-varying prescribed surface Q (from MoistureSurfaceBCFile)
-# GABLS3: 0.25 m observed Q, same height as surface temperature
-optMoistureSurfBC = 2
-
-# zMoisture: screen-level reference height for moisture flux denominator (m).
-# Same as the surface temperature observation height.
-zMoisture = 0.25
-
-# Path to moisture surface BC file (relative to run directory)
-MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
-
-# MoistureFlux: not used when optMoistureSurfBC >= 2; set to 0 as placeholder
-MoistureFlux = 0.0   # kg/kg m/s
-
-# q_inversion: specific humidity lapse rate above domain top (kg/kg/m).
-# Zero gradient = free-atmosphere Q matches domain top value.
-q_inversion = 0.0
 
 # ------------------------------------------------------------
 # Forcing configuration
@@ -137,33 +110,23 @@ q_inversion = 0.0
 #   1 = time + height varying, loaded from GeoWindFile
 optGeoWind = 1
 
-# Constant geostrophic wind (m/s) — used only when optGeoWind = 0
+# Constant geostrophic wind (m/s)
 Ug2 = -6.5
-Vg2 =  4.5
+Vg2 = 4.5
 
 # Path to geostrophic wind file (relative to run directory)
 GeoWindFile = 'input/GeoWind.npz'
 
-# Large-scale advection option:
-#   0 = no mesoscale advection forcing
-#   1 = time + height varying, loaded from AdvectionFile
-optAdvection = 1
-
-# Path to advection forcing file (relative to run directory)
-AdvectionFile = 'input/AdvForcing.npz'
-
-# Coriolis parameter: f = 2*Omega*sin(lat)
-# Cabauw, Netherlands (~51.97 deg N)  =>  f > 0
-f_coriolis = 1.149e-4   # unit: 1/s
+# Coriolis parameter (1/s)
+f_coriolis = 0.0001149
 
 # Potential temperature lapse rate above domain top (K/m)
 inversion = 0.0029
 
-# Buoyancy calculation: 0 = use reference T_0, 1 = use local mean THv
+# Buoyancy calculation: 0 = use reference T_0, 1 = use local THv
 optBuoyancy = 1
 
 # Reference temperature (K)
-# Approximate initial near-surface potential temperature at t=0
 T_0 = 290.0
 
 # ------------------------------------------------------------
@@ -176,10 +139,10 @@ optSgs = 1
 # Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1
 
-# Filter to grid ratio (FGR=1: implicit filtering with dealiasing)
+# Filter to grid ratio (FGR=1: implicit filtering; FGR>=2: explicit + dealiasing)
 FGR = 2
 
-# Initial SGS coefficients (used before first dynamic update when dynamicSGS_call_time > 1)
+# Initial SGS coefficients (used before first dynamic update)
 Cs2 = 0.1 ** 2        # SM models: initial Cs^2
 Cwl = 0.1 ** 2        # WL models: initial C_WL
 Cs2PrRatio = Cs2 / 1.0
@@ -190,13 +153,35 @@ CwlPrRatio = Cwl / 1.0
 # ------------------------------------------------------------
 
 optDamping = 1       # 1: activate Rayleigh damping
-z_damping  = 550.0   # unit: m  (document recommends 550-600 m)
-RelaxTime  = 600.0   # unit: s
+z_damping  = 550    # unit: m
+RelaxTime  = 600    # unit: s
 
 # ------------------------------------------------------------
 # Statistics computation
 # ------------------------------------------------------------
 
-SampleInterval_sec   = 10.0       # collect a sample every 10 s
-OutputInterval_sec   = 300.0      # output averaged stats every 5 min
-Output3DInterval_sec = SimTime  # output 3D fields only at the end of the run
+SampleInterval_sec   = 10.0   # collect a sample every N s
+OutputInterval_sec   = 300.0   # output averaged stats every N s
+Output3DInterval_sec = SimTime   # output 3D fields only at the end of the run
+
+# ------------------------------------------------------------
+# Large-scale advection forcing
+# ------------------------------------------------------------
+# 0: none, 1: time/height-varying (from AdvectionFile)
+optAdvection = 1
+AdvectionFile = 'input/AdvForcing.npz'
+
+# ------------------------------------------------------------
+# Moisture configuration
+# ------------------------------------------------------------
+# 0: dry run, 1: prognostic specific humidity Q
+optMoisture = 1
+# Screen-level moisture reference height (m); 0 = use z0T
+zMoisture = 0.25
+# Surface moisture flux (kg/kg m/s); used when optMoistureSurfBC = 0
+MoistureFlux = 0.0
+# 0: constant flux, 1: time-varying flux, 2: time-varying surface Q
+optMoistureSurfBC = 2
+MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
+# Specific humidity lapse rate above domain top (kg/kg/m); 0 = zero gradient
+q_inversion = 0.0

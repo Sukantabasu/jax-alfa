@@ -120,7 +120,7 @@ T_0 = 265.0
 # Subgrid-scale configuration
 # ------------------------------------------------------------
 
-# SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
+# SGS model: 0 = Static SM, 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
 optSgs = 1
 
 # Dynamic SGS update frequency (every N steps)

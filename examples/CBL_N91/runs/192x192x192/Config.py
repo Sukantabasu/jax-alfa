@@ -112,6 +112,7 @@ T_0 = 300  # unit: K
 # ------------------------------------------------------------
 
 # SGS model to use
+# 0: Static Smagorinsky
 # 1: LASDD-SM (Locally-averaged Scale-dependent Dynamic, Smagorinsky)
 # 2: LASDD-WL (Locally-averaged Scale-dependent Dynamic, Wong-Lilly)
 # 3: LAD-SM  (Locally-averaged Dynamic, Smagorinsky; beta=1)

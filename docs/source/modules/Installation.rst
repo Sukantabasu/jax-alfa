@@ -90,3 +90,24 @@ device to use::
 
 On SLURM clusters the scheduler sets ``CUDA_VISIBLE_DEVICES``
 automatically; ``GPU_ID`` is ignored in that case.
+
+Running on a SLURM Cluster
+--------------------------
+
+A ready-to-use SLURM batch script ``run_simulation_dgx.sh`` is included in
+the repository root.  Edit the two path variables at the top of the script
+before submitting::
+
+    export JAXALFA_ROOT=/path/to/JAXALFA0.1
+    export JAXALFA_RUNDIR=$JAXALFA_ROOT/examples/SBL_GABLS1/runs/...
+
+Then submit with::
+
+    sbatch run_simulation_dgx.sh
+
+The script requests one node, one GPU, and 32 CPU cores, activates the
+specified conda environment, prints GPU diagnostics, regenerates all input
+files, and launches the solver with unbuffered output piped to
+``$JAXALFA_RUNDIR/run.log``.  Adjust the ``#SBATCH`` directives at the top
+of the script (time limit, memory, GPU count) to match your cluster's
+configuration.

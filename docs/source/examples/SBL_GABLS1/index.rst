@@ -13,6 +13,9 @@ post-processing the packaged 100\ :sup:`3` LASDD-SM run, see the :doc:`Tutorial
 .. toctree::
    :maxdepth: 1
 
+   Description <notebooks/SBL_GABLS1_Description>
    Resolution Sensitivity <notebooks/SBL_GABLS1_ResolutionSensitivity>
-   Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>
    SGS Model Sensitivity <notebooks/SBL_GABLS1_SGSModelSensitivity>
+   Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>
+   Horizontal Cross-Sections <notebooks/SBL_GABLS1_HorizontalCrossSections>
+   Vertical Cross-Sections <notebooks/SBL_GABLS1_VerticalCrossSections>

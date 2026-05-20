@@ -12,4 +12,7 @@ at 1.2 m above the ground, and the geostrophic wind is time- and height-varying.
 .. toctree::
    :maxdepth: 1
 
+   Description <notebooks/DC_Wangara_Description>
    Time–Height Diagnostics <notebooks/DC_Wangara_TimeHeight>
+   Horizontal Cross-Sections <notebooks/DC_Wangara_HorizontalCrossSections>
+   Vertical Cross-Sections <notebooks/DC_Wangara_VerticalCrossSections>

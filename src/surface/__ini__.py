@@ -1,5 +1,5 @@
 """
-Utilies package for JAXLES
+Utilies package for JAX-ALFA
 
 Contains miscellaneous codes
 """

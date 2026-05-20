@@ -21,7 +21,7 @@ File: Config.py
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-10-23
-:Description: namelist file for JAXLES runs
+:Description: namelist file for JAX-ALFA runs
 """
 
 
@@ -39,7 +39,7 @@ import numpy as np
 # ------------------------------------------------------------
 # Platform options
 # ------------------------------------------------------------
-use_double_precision = True
+use_double_precision = False
 # 0: use CPU, 1: use GPU
 optGPU = 1
 GPU_ID = 0
@@ -102,7 +102,7 @@ f_coriolis = 1e-4  # unit: 1/s
 inversion = 3/1000  # unit: K/m
 
 # Buoyancy calculation
-optBuoyancy = 2  #1: use reference T_0, 2: use local THv
+optBuoyancy = 1  #0: use reference T_0, 1: use local THv
 
 # Reference temperature
 T_0 = 300  # unit: K

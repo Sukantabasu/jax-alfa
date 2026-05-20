@@ -102,7 +102,7 @@ f_coriolis = 1e-4  # unit: 1/s
 inversion = 0/1000  # unit: K/m
 
 # Buoyancy calculation
-optBuoyancy = 2  #1: use reference T_0, 2: use local THv
+optBuoyancy = 1  #0: use reference T_0, 1: use local THv
 
 T_0 = 300  # unit: K
 

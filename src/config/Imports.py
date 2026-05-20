@@ -21,7 +21,7 @@ File: Imports.py
 :AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
-:Description: imports all the modules for JAXLES
+:Description: imports all the modules for JAX-ALFA
 """
 
 import os

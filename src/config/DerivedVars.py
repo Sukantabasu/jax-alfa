@@ -21,7 +21,7 @@ File: DerivedVars.py
 :AI Assistance: Claude Code (Anthropic) and Codex (OpenAI) are used for documentation,
                 code restructuring, and performance optimization
 :Date: 2025-4-3
-:Description: Derived variables for JAXLES computed from base configuration
+:Description: Derived variables for JAX-ALFA computed from base configuration
 """
 
 # ============================================================

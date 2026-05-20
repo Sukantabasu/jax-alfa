@@ -42,7 +42,7 @@ from ..utilities.Utilities import PlanarMean
 
 
 # ============================================================
-#  Compute buoyancy terms using reference temperature (Option 1)
+#  Compute buoyancy terms using reference temperature (Option 0)
 # ============================================================
 
 @jax.jit
@@ -97,7 +97,7 @@ def BuoyancyOpt1(TH, H, ZeRo3D):
 
 
 # ============================================================
-#  Compute buoyancy terms using local mean temperature (Option 2)
+#  Compute buoyancy terms using local mean temperature (Option 1)
 # ============================================================
 
 @jax.jit

@@ -126,7 +126,7 @@ f_coriolis = -8.26e-5  # unit: 1/s
 inversion = 0.001
 
 # Buoyancy calculation: 1 = use fixed T_0
-optBuoyancy = 2 
+optBuoyancy = 1 
 
 # Reference temperature (K) — screen-level potential temperature at t=0
 # theta_screen = (5.3 + 273.16) + 1.2*10/1000 = 278.47 K  (from Wangara_Sfc3309.txt)

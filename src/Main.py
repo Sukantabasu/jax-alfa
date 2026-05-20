@@ -305,7 +305,7 @@ for iteration in range(istep, nsteps+1, 1):
     #  Compute Buoyancy Terms
     # ------------------------------------------------------------
     H = Q if optMoisture >= 1 else ZeRo3D
-    if optBuoyancy == 1:
+    if optBuoyancy == 0:
         buoyancy = BuoyancyOpt1(TH, H, ZeRo3D)
     else:
         buoyancy = BuoyancyOpt2(TH, H, ZeRo3D)

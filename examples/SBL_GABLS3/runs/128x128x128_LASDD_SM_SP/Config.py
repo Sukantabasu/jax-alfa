@@ -160,7 +160,7 @@ f_coriolis = 1.149e-4   # unit: 1/s
 inversion = 0.0029
 
 # Buoyancy calculation: 2 = use local mean temperature
-optBuoyancy = 2
+optBuoyancy = 1
 
 # Reference temperature (K)
 # Approximate initial near-surface potential temperature at t=0

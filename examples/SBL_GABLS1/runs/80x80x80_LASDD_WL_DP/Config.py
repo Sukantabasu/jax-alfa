@@ -111,7 +111,7 @@ f_coriolis = 1.39e-4  # unit: 1/s
 inversion = 0.01
 
 # Buoyancy calculation: 1 = use fixed T_0
-optBuoyancy = 2
+optBuoyancy = 1
 
 # Reference temperature (K) — initial surface temperature
 T_0 = 265.0

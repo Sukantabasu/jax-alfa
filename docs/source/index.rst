@@ -82,6 +82,12 @@ Requirements
 
    modules/modules
 
+Ask a Question
+==============
+
+Have a question or found a bug? Please open an issue on GitHub:
+https://github.com/Sukantabasu/jax-alfa/issues
+
 Indices and tables
 ==================
 

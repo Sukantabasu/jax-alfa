@@ -34,6 +34,8 @@ JAX installation depends on your hardware platform.
 
 **GPU (NVIDIA CUDA)**::
 
+    pip install -U "jax[cuda13]"
+    # or, on CUDA 12 systems:
     pip install -U "jax[cuda12]"
 
 For other platforms or CUDA versions, consult the
@@ -66,7 +68,11 @@ directory, then launch the solver::
     python $JAXALFA_RUNDIR/CreateSurfaceBC_GABLS1_40.py
     python -m src.Main
 
-Alternatively, use the provided convenience script::
+Always run ``python -m src.Main`` from the repository root so that the
+``src`` package is importable.
+
+Alternatively, use the provided convenience script after editing
+``JAXALFA_RUNDIR`` inside it to point to your run directory::
 
     bash run_simulation.sh
 
@@ -95,19 +101,30 @@ Running on a SLURM Cluster
 --------------------------
 
 A ready-to-use SLURM batch script ``run_simulation_dgx.sh`` is included in
-the repository root.  Edit the two path variables at the top of the script
-before submitting::
+the repository root.  Before submitting, edit the following items inside the
+script:
 
-    export JAXALFA_ROOT=/path/to/JAXALFA0.1
-    export JAXALFA_RUNDIR=$JAXALFA_ROOT/examples/SBL_GABLS1/runs/...
+1. **Path variables** — set ``JAXALFA_ROOT`` and ``JAXALFA_RUNDIR``::
+
+       export JAXALFA_ROOT=/path/to/JAXALFA0.1
+       export JAXALFA_RUNDIR=$JAXALFA_ROOT/examples/SBL_GABLS1/runs/...
+
+2. **Conda initialisation** — update the ``source`` path to your cluster's
+   conda installation::
+
+       source /path/to/anaconda3/etc/profile.d/conda.sh
+
+3. **Conda environment** — update the ``conda activate`` line to your
+   JAX-enabled environment::
+
+       conda activate /path/to/anaconda3/envs/jax-gpu
+
+4. **SBATCH directives** — adjust the time limit, memory, and GPU count at
+   the top of the script to match your cluster's configuration.
 
 Then submit with::
 
     sbatch run_simulation_dgx.sh
 
-The script requests one node, one GPU, and 32 CPU cores, activates the
-specified conda environment, prints GPU diagnostics, regenerates all input
-files, and launches the solver with unbuffered output piped to
-``$JAXALFA_RUNDIR/run.log``.  Adjust the ``#SBATCH`` directives at the top
-of the script (time limit, memory, GPU count) to match your cluster's
-configuration.
+The script prints GPU diagnostics, regenerates all input files, and launches
+the solver with unbuffered output piped to ``$JAXALFA_RUNDIR/run.log``.

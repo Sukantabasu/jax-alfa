@@ -199,4 +199,4 @@ RelaxTime  = 600.0   # unit: s
 
 SampleInterval_sec   = 10.0       # collect a sample every 10 s
 OutputInterval_sec   = 300.0      # output averaged stats every 5 min
-Output3DInterval_sec = 3600.0     # output 3D fields every 1 hr
+Output3DInterval_sec = SimTime  # output 3D fields only at the end of the run

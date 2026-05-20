@@ -166,7 +166,7 @@ RelaxTime  = 600.0   # unit: s
 
 SampleInterval_sec   = 10.0       # collect a sample every 10 s
 OutputInterval_sec   = 60.0       # output averaged stats every 60 s
-Output3DInterval_sec = 24*3600.0  # output 3D fields at the end of the run
+Output3DInterval_sec = SimTime  # output 3D fields only at the end of the run
 
 # ------------------------------------------------------------
 # Large-scale advection forcing

@@ -154,7 +154,7 @@ SampleInterval_sec = 12.0 # ideally, should be divisible by dt
 # Output averages every OutputInterval_sec (sec)
 OutputInterval_sec = 60.0 # ideally, should be divisible by dt
 # Output 3D fields every Output3DInterval_sec (sec)
-Output3DInterval_sec = 1800.0 # ideally, should be divisible by dt
+Output3DInterval_sec = SimTime  # output 3D fields only at the end of the run
 
 # ------------------------------------------------------------
 # Surface BC configuration

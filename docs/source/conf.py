@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 # Project information
 project = 'JAX-ALFA'
-copyright = '2025, Sukanta Basu'
+copyright = '2025–2026, Sukanta Basu'
 author = 'Sukanta Basu'
 release = '0.0.1'
 

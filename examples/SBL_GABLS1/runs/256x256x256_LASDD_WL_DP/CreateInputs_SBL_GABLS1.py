@@ -37,7 +37,7 @@ import os
 np.random.seed(42)
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_cfg = {{}}
+_cfg = {}
 with open(os.path.join(_script_dir, 'Config.py')) as _f:
     exec(_f.read(), _cfg)
 
@@ -77,8 +77,8 @@ os.makedirs(input_dir, exist_ok=True)
 np.savetxt(os.path.join(input_dir, 'vel.ini'), vel_data)
 np.savetxt(os.path.join(input_dir, 'TH.ini'),  TH_flat)
 
-print(f"GABLS1 initial conditions written to {{input_dir}}")
-print(f"  Grid: nx={{nx}}, ny={{ny}}, nz={{nz}}, dz={{dz:.4f}} m")
-print(f"  vel.ini shape: {{vel_data.shape}}")
-print(f"  TH.ini  shape: {{TH_flat.shape}}")
-print(f"  TH range: {{TH.min():.3f}} - {{TH.max():.3f}} K")
+print(f"GABLS1 initial conditions written to {input_dir}")
+print(f"  Grid: nx={nx}, ny={ny}, nz={nz}, dz={dz:.4f} m")
+print(f"  vel.ini shape: {vel_data.shape}")
+print(f"  TH.ini  shape: {TH_flat.shape}")
+print(f"  TH range: {TH.min():.3f} - {TH.max():.3f} K")

@@ -66,8 +66,6 @@ Requirements
    examples/NBL_A94/index
    examples/SBL_GABLS1/index
    examples/SBL_GABLS3/index
-   examples/SBL_GABLS4/index
-   examples/ET_NB86/index
    examples/DC_Wangara/index
 
 .. toctree::

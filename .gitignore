@@ -25,6 +25,7 @@ run.log
 
 # JAX-ALFA data files (too large for git)
 *.ini
+*.npy
 *.npz
 
 # Anaconda project files

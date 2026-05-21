@@ -64,8 +64,8 @@ def Initialize_uvw():
         velocity components
     """
 
-    InputVelocity = os.path.join(InputDir, 'vel.ini')
-    vel = np.loadtxt(InputVelocity)
+    InputVelocity = os.path.join(InputDir, 'vel.npy')
+    vel = np.load(InputVelocity)
     u = vel[:, 0] - Ugal
     v = vel[:, 1]
     w = vel[:, 2]
@@ -90,8 +90,8 @@ def Initialize_TH():
         potential temperature field
     """
 
-    InputTH = os.path.join(InputDir, 'TH.ini')
-    TH = np.loadtxt(InputTH)
+    InputTH = os.path.join(InputDir, 'TH.npy')
+    TH = np.load(InputTH)
 
     TH = np.reshape(TH, (nx, ny, nz), order='F')
 
@@ -336,8 +336,8 @@ def Initialize_Q():
     --------
     Q : jnp.ndarray of shape (nx, ny, nz)  [kg/kg]
     """
-    InputQ = os.path.join(InputDir, 'Q.ini')
-    Q = np.loadtxt(InputQ)
+    InputQ = os.path.join(InputDir, 'Q.npy')
+    Q = np.load(InputQ)
     Q = np.reshape(Q, (nx, ny, nz), order='F')
     return jnp.array(Q)
 

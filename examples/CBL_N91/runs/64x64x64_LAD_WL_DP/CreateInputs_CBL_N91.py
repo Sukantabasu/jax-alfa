@@ -21,7 +21,7 @@ File: CreateInputs_CBL_N91.py
 :AI Assistance: Claude.AI (Anthropic) is used for documentation,
                 code restructuring, and performance optimization
 :Date: 2026-05-20
-:Description: Creates vel.ini and TH.ini for the CBL_N91 case.
+:Description: Creates vel.npy and TH.npy for the CBL_N91 case.
               Reads grid parameters from Config.py in the same directory.
 
               Initial conditions after Nieuwstadt et al. (1991):
@@ -79,10 +79,10 @@ vel_data = np.column_stack([u_flat, v_flat, w_flat])
 
 input_dir = os.path.join(_script_dir, 'input')
 os.makedirs(input_dir, exist_ok=True)
-np.savetxt(os.path.join(input_dir, 'vel.ini'), vel_data)
-np.savetxt(os.path.join(input_dir, 'TH.ini'),  TH_flat)
+np.save(os.path.join(input_dir, 'vel.npy'), vel_data)
+np.save(os.path.join(input_dir, 'TH.npy'),  TH_flat)
 
 print(f"CBL_N91 initial conditions written to {input_dir}")
 print(f"  Grid: nx={nx}, ny={ny}, nz={nz}, dz={dz:.3f} m")
-print(f"  vel.ini shape: {vel_data.shape}")
-print(f"  TH.ini  shape: {TH_flat.shape}")
+print(f"  vel.npy shape: {vel_data.shape}")
+print(f"  TH.npy  shape: {TH_flat.shape}")

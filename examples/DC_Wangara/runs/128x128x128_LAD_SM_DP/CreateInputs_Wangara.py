@@ -19,7 +19,7 @@ File: CreateInputs_Wangara.py
 
 :Author: Sukanta Basu
 :Date: 2026-05-18
-:Description: Creates vel.ini and TH.ini for the Wangara diurnal cycle case
+:Description: Creates vel.npy and TH.npy for the Wangara diurnal cycle case
               (Basu et al. 2008, BLM).
 
               Simulation period: full diurnal cycle from 0900 LST day 33
@@ -35,8 +35,8 @@ File: CreateInputs_Wangara.py
                 TH: amplitude 0.10  K, applied below z = 100 m
 
               Output files (written to input/ sub-directory):
-                vel.ini   — dimensional (u, v, w) in m/s, Fortran order
-                TH.ini    — dimensional potential temperature in K, Fortran order
+                vel.npy   — dimensional (u, v, w) in m/s, Fortran order
+                TH.npy    — dimensional potential temperature in K, Fortran order
 
               Place this script in the run directory alongside Config.py.
               Set SOUNDING_FILE below to the path of Wangara_Sounding3309.txt.
@@ -141,12 +141,12 @@ vel_data = np.column_stack([u_flat, v_flat, w_flat])
 input_dir = os.path.join(_script_dir, 'input')
 os.makedirs(input_dir, exist_ok=True)
 
-np.savetxt(os.path.join(input_dir, 'vel.ini'), vel_data)
-np.savetxt(os.path.join(input_dir, 'TH.ini'),  TH_flat)
+np.save(os.path.join(input_dir, 'vel.npy'), vel_data)
+np.save(os.path.join(input_dir, 'TH.npy'),  TH_flat)
 
 print(f"Wangara initial conditions written to {input_dir}")
-print(f"  vel.ini  shape: {vel_data.shape}  (u, v, w columns in m/s)")
-print(f"  TH.ini   shape: {TH_flat.shape}")
+print(f"  vel.npy  shape: {vel_data.shape}  (u, v, w columns in m/s)")
+print(f"  TH.npy   shape: {TH_flat.shape}")
 print(f"  Grid: nz={nz}, dz={dz:.3f} m, z[0]={z[0]:.3f} m, z[-1]={z[-1]:.3f} m")
 print(f"  U range : [{U1D.min():.2f}, {U1D.max():.2f}] m/s")
 print(f"  V range : [{V1D.min():.2f}, {V1D.max():.2f}] m/s")

@@ -19,7 +19,7 @@ File: CreateInputs_GABLS3.py
 
 :Author: Sukanta Basu
 :Date: 2026-05-19
-:Description: Creates vel.ini, TH.ini, and Q.ini for the GABLS3 case.
+:Description: Creates vel.npy, TH.npy, and Q.npy for the GABLS3 case.
 
               Initial conditions from the 00 UTC 2 July 2006 sounding
               (Tables 2 and 3 of GABLS3_LES_Revised.docx):
@@ -35,9 +35,9 @@ File: CreateInputs_GABLS3.py
                 TH   : amplitude 0.1 K (constant), applied for z <= 200 m
 
               Output files (written to input/ sub-directory):
-                vel.ini   — dimensional (u, v, w) in m/s, Fortran order
-                TH.ini    — dimensional potential temperature in K, Fortran order
-                Q.ini     — dimensional specific humidity in kg/kg, Fortran order
+                vel.npy   — dimensional (u, v, w) in m/s, Fortran order
+                TH.npy    — dimensional potential temperature in K, Fortran order
+                Q.npy     — dimensional specific humidity in kg/kg, Fortran order
 
               Place this script in the run directory alongside Config.py.
 """
@@ -169,14 +169,14 @@ vel_data = np.column_stack([u_flat, v_flat, w_flat])
 input_dir = os.path.join(_script_dir, 'input')
 os.makedirs(input_dir, exist_ok=True)
 
-np.savetxt(os.path.join(input_dir, 'vel.ini'), vel_data)
-np.savetxt(os.path.join(input_dir, 'TH.ini'),  TH_flat)
-np.savetxt(os.path.join(input_dir, 'Q.ini'),   Q_flat)
+np.save(os.path.join(input_dir, 'vel.npy'), vel_data)
+np.save(os.path.join(input_dir, 'TH.npy'),  TH_flat)
+np.save(os.path.join(input_dir, 'Q.npy'),   Q_flat)
 
 print(f"GABLS3 initial conditions written to {input_dir}")
-print(f"  vel.ini shape: {vel_data.shape}  (u, v, w columns in m/s)")
-print(f"  TH.ini  shape: {TH_flat.shape}")
-print(f"  Q.ini   shape: {Q_flat.shape}")
+print(f"  vel.npy shape: {vel_data.shape}  (u, v, w columns in m/s)")
+print(f"  TH.npy  shape: {TH_flat.shape}")
+print(f"  Q.npy   shape: {Q_flat.shape}")
 print(f"  Grid: nz={nz}, dz={dz:.4f} m, z[0]={z[0]:.4f} m, z[-1]={z[-1]:.4f} m")
 print(f"  U range : [{U1D.min():.3f}, {U1D.max():.3f}] m/s")
 print(f"  V range : [{V1D.min():.3f}, {V1D.max():.3f}] m/s")

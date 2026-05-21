@@ -23,12 +23,13 @@ About the Author
 ----------------
 
 `Sukanta Basu <https://www.albany.edu/asrc/faculty/sukanta-basu>`_ is a
-Professor of Empire Innovation at the Atmospheric Sciences Research Center
-(ASRC), University at Albany, SUNY. His research spans atmospheric boundary
-layer processes, turbulence modeling, numerical weather prediction, atmospheric
-optics, machine learning, and renewable energy. He has held positions at Texas
-Tech University, North Carolina State University, and Delft University of
-Technology.
+Professor of Empire Innovation at the University at Albany, SUNY. He is
+affiliated with the Atmospheric Sciences Research Center (ASRC) and the
+Environmental and Sustainable Engineering (ESE) Department. His research spans
+atmospheric boundary layer processes, turbulence modeling, numerical weather
+prediction, atmospheric optics, machine learning, and renewable energy. He has
+held positions at Texas Tech University, North Carolina State University, and
+Delft University of Technology.
 
 | `Google Scholar <https://scholar.google.com/citations?user=08bv9p8AAAAJ&hl=en>`_
 | `ResearchGate <https://www.researchgate.net/profile/Sukanta_Basu>`_

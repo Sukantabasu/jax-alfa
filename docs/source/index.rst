@@ -50,7 +50,7 @@ Requirements
    :maxdepth: 1
    :caption: Tutorial
 
-   GABLS1 <tutorial/Tutorial_notebook>
+   Stable BL: GABLS1 <tutorial/Tutorial_notebook>
 
 .. toctree::
    :maxdepth: 1

@@ -56,7 +56,8 @@ Requirements
    :maxdepth: 1
    :caption: Performance Benchmarks
 
-   benchmark/Benchmark_notebook
+   A100 (80 GB) <benchmark/Benchmark_A100>
+   GPU Platform Comparison <benchmark/Benchmark_GPUComparison>
 
 .. toctree::
    :maxdepth: 2

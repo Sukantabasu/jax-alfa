@@ -66,6 +66,7 @@ if [[ -n "$JAXALFA_RUNDIR" && -d "$JAXALFA_RUNDIR/output" ]]; then
     echo "Deleting previous output directory..."
     rm -rf "$JAXALFA_RUNDIR/output"
 fi
+rm -f "$JAXALFA_RUNDIR/run.log"
 
 # ============================================================
 # Generate inputs
@@ -92,6 +93,6 @@ done
 
 echo "Starting simulation..."
 
-PYTHONUNBUFFERED=1 stdbuf -oL -eL python -u -m src.Main 2>&1 | tee -a "$JAXALFA_RUNDIR/run.log"
+PYTHONUNBUFFERED=1 stdbuf -oL -eL python -u -m src.Main 2>&1 | tee "$JAXALFA_RUNDIR/run.log"
 
 echo "Simulation completed."

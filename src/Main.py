@@ -127,6 +127,16 @@ else:
 # ============================================================
 StatsDict = InitializeStats(ZeRo1D)
 SampleCounter = 0  # Counter to sample statistics
+
+# For STAB-SM (optSgs=5) the dynamic 1D profile variables are never set by
+# the dynamic SGS branch.  Initialize them here so ComputeStats always has
+# valid arrays.  They are overwritten each iteration inside the optSgs==5 block.
+if optSgs == 5:
+    Cs2_1D_avg1   = ZeRo1D.copy()
+    Cs2_1D_avg2   = ZeRo1D.copy()
+    Cs2PrRatio_1D = ZeRo1D.copy()
+    beta1_1D      = ZeRo1D.copy()
+    beta2_1D      = ZeRo1D.copy()
 OutputDir = os.path.join(os.environ['JAXALFA_RUNDIR'], 'output')
 os.makedirs(OutputDir, exist_ok=True)
 
@@ -314,7 +324,7 @@ for iteration in range(istep, nsteps+1, 1):
     #  Compute SGS Terms
     # ------------------------------------------------------------
 
-    if optSgs >= 1 and (iteration == istep or iteration % dynamicSGS_call_time == 0):
+    if 1 <= optSgs <= 4 and (iteration == istep or iteration % dynamicSGS_call_time == 0):
 
         # print('Dynamic SGS')
 
@@ -356,6 +366,51 @@ for iteration in range(istep, nsteps+1, 1):
 
         # Unpack variables for computation of statistics
         _, _, _, txy, txz, tyz = dynamicSGSmomentum[0:6]
+
+    elif optSgs == 5:
+
+        # print('STAB-SM SGS')
+
+        (divtx, divty, divtz,
+         stabsmSGSmomentum) = (
+            DivStressStaticSGS_STABSM(
+                dudx, dvdx, dwdx,
+                dudy, dvdy, dwdy,
+                dudz, dvdz, dwdz,
+                dTHdz,
+                u, v, M_sfc_loc, MOSTfunctions,
+                ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft,
+                kx2, ky2))
+
+        # stabsmSGSmomentum[10:14] = (Lambda_uvp2_3D, Lambda_w2_3D, fhS_uvp, fhS_w)
+        qz, divq = (
+            DivFluxStaticSGS_STABSM(
+                stabsmSGSmomentum[10:14],
+                dTHdx, dTHdy, dTHdz,
+                qz_sfc_step,
+                ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft,
+                kx2, ky2))
+
+        # Moisture SGS: reuse same Lambda and fhS as heat
+        if optMoisture >= 1:
+            qHz_q, divqm = DivFluxStaticSGS_STABSM(
+                stabsmSGSmomentum[10:14],
+                dQdx, dQdy, dQdz,
+                qm_sfc_step,
+                ZeRo3D, ZeRo3D_fft, ZeRo3D_pad_fft,
+                kx2, ky2)
+        else:
+            qHz_q = ZeRo3D; divqm = ZeRo3D
+
+        # stabsmSGSmomentum[14] = Lambda_uvp2_1D (effective Cs^2 profile)
+        Cs2_1D_avg1    = stabsmSGSmomentum[14]
+        Cs2_1D_avg2    = stabsmSGSmomentum[14]
+        Cs2PrRatio_1D  = stabsmSGSmomentum[14]
+        beta1_1D       = ZeRo1D
+        beta2_1D       = ZeRo1D
+
+        # Unpack variables for computation of statistics
+        _, _, _, txy, txz, tyz = stabsmSGSmomentum[0:6]
 
     else:
 

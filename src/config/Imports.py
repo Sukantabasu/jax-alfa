@@ -135,6 +135,8 @@ def ImportLES():
     from ..pde.NSE_PressureTerms import PressureMatrix, PressureSolve
     from ..pde.NSE_SGSTerms import DivStressStaticSGS, DivStressDynamicSGS
     from ..pde.SCL_SGSTerms import DivFluxStaticSGS, DivFluxDynamicSGS
+    from ..pde.NSE_SGSTerms_STABSM import DivStressStaticSGS_STABSM
+    from ..pde.SCL_SGSTerms_STABSM import DivFluxStaticSGS_STABSM
     from ..pde.NSE_AllTerms import RHS_Momentum
     from ..pde.SCL_AllTerms import RHS_Scalar, RHS_Moisture
     from ..pde.NSE_TimeAdvancement import AB2_uvw

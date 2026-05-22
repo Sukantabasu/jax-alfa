@@ -12,6 +12,7 @@ export JAXALFA_RUNDIR=/data/Sukanta/MODELS/JAX-ALFA/JAXALFA0.1/examples/DC_Wanga
 
 cd "$(dirname "$0")"
 rm -rf $JAXALFA_RUNDIR/output
+rm -f  $JAXALFA_RUNDIR/run.log
 for f in "$JAXALFA_RUNDIR"/CreateInputs*.py; do
     [ -f "$f" ] && python "$f"
 done

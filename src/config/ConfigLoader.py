@@ -128,6 +128,24 @@ if 'q_inversion' not in dir():
 if 'GPU_ID' not in dir():
     GPU_ID = 0
 
+# Backward-compatible defaults for the stability-dependent Smagorinsky model
+# (STAB-SM, optSgs=5).  Override any of these in Config.py if needed.
+# CsMO_SM : Smagorinsky coefficient (0.23 recommended for finite-difference codes)
+# aMO_SM  : heat stability parameter (= 1/Pr_t_neutral)
+# bMO_SM, cMO_SM : unstable stability function coefficients
+# fMO_SM, gMO_SM, hMO_SM : stable stability function coefficients
+# RicMO_SM : critical Richardson number
+# rMO_SM   : stable stability function exponent
+if 'CsMO_SM'  not in dir(): CsMO_SM  = 0.17
+if 'aMO_SM'   not in dir(): aMO_SM   = 1.0 / 0.7
+if 'bMO_SM'   not in dir(): bMO_SM   = 40.0
+if 'cMO_SM'   not in dir(): cMO_SM   = 16.0
+if 'fMO_SM'   not in dir(): fMO_SM   = 1.0 / 0.7
+if 'gMO_SM'   not in dir(): gMO_SM   = 1.2
+if 'hMO_SM'   not in dir(): hMO_SM   = 0.0
+if 'RicMO_SM' not in dir(): RicMO_SM = 0.25
+if 'rMO_SM'   not in dir(): rMO_SM   = 4.0
+
 # Backward-compatible default for float precision
 if 'use_double_precision' not in dir():
     use_double_precision = False

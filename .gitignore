@@ -1,3 +1,10 @@
+# STAB-SM SGS model (in development, not yet released)
+src/subgridscale/SGSStresses_STABSM.py
+src/subgridscale/ScalarSGSFluxes_STABSM.py
+src/subgridscale/StaticSGS_STABSM_Main.py
+src/pde/NSE_SGSTerms_STABSM.py
+src/pde/SCL_SGSTerms_STABSM.py
+
 # Examples not for public release
 examples/CBL_N91_G3/
 examples/CBL_N91_G5/

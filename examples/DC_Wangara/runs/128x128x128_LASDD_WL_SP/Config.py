@@ -121,7 +121,7 @@ GeoWindFile = 'input/GeoWind.npz'
 f_coriolis = -8.26e-05
 
 # Potential temperature lapse rate above domain top (K/m)
-inversion = 0.0
+inversion = 0.001
 
 # Buoyancy calculation: 0 = use reference T_0, 1 = use local THv
 optBuoyancy = 1
@@ -133,7 +133,7 @@ T_0 = 278.5
 # Subgrid-scale configuration
 # ------------------------------------------------------------
 
-# SGS model: 0 = Static SM, 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
+# SGS model: 1 = LASDD-SM, 2 = LASDD-WL, 3 = LAD-SM, 4 = LAD-WL
 optSgs = 2
 
 # Dynamic SGS update frequency (every N steps)

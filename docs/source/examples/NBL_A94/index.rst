@@ -11,5 +11,6 @@ Neutral BL
    SGS Coefficients <notebooks/NBL_A94_SGSCoefficients>
    Precision Sensitivity <notebooks/NBL_A94_PrecisionSensitivity>
    Similarity Theory <notebooks/NBL_A94_SimilarityTheory>
+   Structure Functions <notebooks/NBL_A94_StructureFunctions>
    Horizontal Cross-Sections <notebooks/NBL_A94_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/NBL_A94_VerticalCrossSections>

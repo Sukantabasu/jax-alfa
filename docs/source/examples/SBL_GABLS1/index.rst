@@ -16,6 +16,7 @@ post-processing the packaged 100\ :sup:`3` LASDD-SM run, see the :doc:`Tutorial
    Description <notebooks/SBL_GABLS1_Description>
    Resolution Sensitivity <notebooks/SBL_GABLS1_ResolutionSensitivity>
    SGS Model Sensitivity <notebooks/SBL_GABLS1_SGSModelSensitivity>
+   SGS Coefficients <notebooks/SBL_GABLS1_SGSCoefficients>
    Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>
    Horizontal Cross-Sections <notebooks/SBL_GABLS1_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/SBL_GABLS1_VerticalCrossSections>

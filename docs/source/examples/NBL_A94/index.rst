@@ -8,6 +8,7 @@ Neutral BL
    Description <notebooks/NBL_A94_Description>
    Resolution Sensitivity <notebooks/NBL_A94_ResolutionSensitivity>
    SGS Model Sensitivity <notebooks/NBL_A94_SGSModelSensitivity>
+   SGS Coefficients <notebooks/NBL_A94_SGSCoefficients>
    Precision Sensitivity <notebooks/NBL_A94_PrecisionSensitivity>
    Similarity Theory <notebooks/NBL_A94_SimilarityTheory>
    Horizontal Cross-Sections <notebooks/NBL_A94_HorizontalCrossSections>

@@ -7,6 +7,7 @@ Convective BL
    Description <notebooks/CBL_N91_Description>
    Resolution Sensitivity <notebooks/CBL_N91_ResolutionSensitivity>
    SGS Model Sensitivity <notebooks/CBL_N91_SGSModelSensitivity>
+   SGS Coefficients <notebooks/CBL_N91_SGSCoefficients>
    Precision Sensitivity <notebooks/CBL_N91_PrecisionSensitivity>
    Horizontal Cross-Sections <notebooks/CBL_N91_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/CBL_N91_VerticalCrossSections>

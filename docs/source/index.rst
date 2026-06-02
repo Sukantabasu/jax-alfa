@@ -48,6 +48,12 @@ Requirements
 
 .. toctree::
    :maxdepth: 1
+   :caption: User Guidelines
+
+   guidelines/BestPractices_and_Pitfalls
+
+.. toctree::
+   :maxdepth: 1
    :caption: Tutorial
 
    Stable BL: GABLS1 <tutorial/Tutorial_notebook>

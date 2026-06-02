@@ -62,7 +62,7 @@ Requirements
    :maxdepth: 1
    :caption: Performance Benchmarks
 
-   A100 (80 GB) <benchmark/Benchmark_A100>
+   NVIDIA A100 (80 GB) <benchmark/Benchmark_A100>
    Hardware Platform Comparison <benchmark/Benchmark_PlatformComparison>
 
 .. toctree::

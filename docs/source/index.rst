@@ -51,6 +51,7 @@ Requirements
    :caption: User Guidelines
 
    guidelines/BestPractices_and_Pitfalls
+   Config.py Reference <guidelines/Config_Reference>
 
 .. toctree::
    :maxdepth: 1

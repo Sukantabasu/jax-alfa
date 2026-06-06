@@ -196,8 +196,18 @@ def ThomasPressureInit():
 
     # ------------------------------------------------------------------
     # Thomas factorisation  (new — computed once at startup)
+    #
+    # The (i,j)=(0,0) zero mode has kx=ky=0, which makes the interior
+    # main-diagonal entries equal to -2/dz² and the Neumann-Neumann
+    # system singular.  The Thomas forward sweep would produce a zero
+    # (or near-zero) final pivot, causing division by zero in the back
+    # substitution.  Fix: replace the interior rows of b[0,0,:] with
+    # -(1 + 2/dz²) — a non-singular Helmholtz system — before factorising.
+    # The (0,0) Thomas solution is never used: ThomasPressureSolve
+    # supplies the correct zero-mode pressure via direct integration.
     # ------------------------------------------------------------------
-    b_thomas, m_thomas = _thomas_factorize(a_pressure, b_pressure, c_pressure)
+    b_safe = b_pressure.at[0, 0, 1:nz].set(-(1.0 + 2.0 / dz ** 2))
+    b_thomas, m_thomas = _thomas_factorize(a_pressure, b_safe, c_pressure)
 
     return (kr2_pressure, kc2_pressure,
             a_pressure, b_pressure, c_pressure,
@@ -225,34 +235,45 @@ def ThomasPressureSolve(RC_real, RC_imag, fRz_real,
     """
 
     # ------------------------------------------------------------------
-    # Solve all (nx × ny_rfft) tridiagonal systems in one pass
+    # Mask RHS for special modes before solving.
+    #
+    # Zero mode (0,0): singular — handled by direct integration below.
+    # Nyquist modes (x-Nyquist row and y-Nyquist column): aliased — must
+    # be zero in the output.  Zeroing the RHS here means Thomas never
+    # touches these solutions, avoiding both wasted work and any reliance
+    # on solver behaviour for modes we discard.
     # ------------------------------------------------------------------
-    x_real = _thomas_solve(m_thomas, b_thomas, c_pressure, RC_real)
-    x_imag = _thomas_solve(m_thomas, b_thomas, c_pressure, RC_imag)
+    RC_r = (RC_real
+            .at[0,          0,          :].set(0.0)   # zero mode
+            .at[nx_rfft - 1, :,         :].set(0.0)   # x-Nyquist row
+            .at[:,          ny_rfft - 1, :].set(0.0))  # y-Nyquist column
+    RC_i = (RC_imag
+            .at[0,          0,          :].set(0.0)
+            .at[nx_rfft - 1, :,         :].set(0.0)
+            .at[:,          ny_rfft - 1, :].set(0.0))
+
+    # ------------------------------------------------------------------
+    # Solve all (nx × ny_rfft) tridiagonal systems in one pass.
+    # Special modes have zero RHS so they produce zero solutions.
+    # ------------------------------------------------------------------
+    x_real = _thomas_solve(m_thomas, b_thomas, c_pressure, RC_r)
+    x_imag = _thomas_solve(m_thomas, b_thomas, c_pressure, RC_i)
 
     # The boundary row k=0 encodes the Neumann BC; interior solution is [1:]
     fp_real = x_real[..., 1:]   # (nx, ny_rfft, nz)
     fp_imag = x_imag[..., 1:]
 
     # ------------------------------------------------------------------
-    # Zero mode (i=0, j=0): Neumann-Neumann system is singular.
-    # Integrate the vertical flux directly, same as PressureSolve.
+    # Zero mode (i=0, j=0): overwrite the zero Thomas solution with the
+    # correct pressure obtained by direct vertical integration of fRz,
+    # identical to PressureSolve.  Uses the original (unmasked) RC_real.
     # ------------------------------------------------------------------
     zero_first = RC_real[0, 0, 0]
     zero_rest  = zero_first + jnp.cumsum(fRz_real[0, 0, 1:nz] * dz)
     zero_mode  = jnp.concatenate([jnp.array([zero_first]), zero_rest])
     fp_real = fp_real.at[0, 0].set(zero_mode)
     fp_imag = fp_imag.at[0, 0].set(jnp.zeros(nz))
-
-    # ------------------------------------------------------------------
-    # Nyquist modes: zero out (same as PressureSolve).
-    # x-Nyquist row: index nx//2 = nx_rfft - 1 in the full-FFT x-axis.
-    # y-Nyquist column: index ny//2 = ny_rfft - 1.
-    # ------------------------------------------------------------------
-    fp_real = fp_real.at[nx_rfft - 1, :, :].set(jnp.zeros((ny_rfft, nz)))
-    fp_imag = fp_imag.at[nx_rfft - 1, :, :].set(jnp.zeros((ny_rfft, nz)))
-    fp_real = fp_real.at[:, ny_rfft - 1, :].set(jnp.zeros((nx, nz)))
-    fp_imag = fp_imag.at[:, ny_rfft - 1, :].set(jnp.zeros((nx, nz)))
+    # Nyquist entries are already zero (RHS was zeroed above).
 
     # ------------------------------------------------------------------
     # Reconstruct pressure and compute its gradients

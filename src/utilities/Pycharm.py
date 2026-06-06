@@ -99,6 +99,7 @@ from ..pde.SCL_AdvectionTerms import ScalarAdvection
 from ..pde.NSE_BuoyancyTerms import BuoyancyOpt1, BuoyancyOpt2
 from ..pde.NSE_PressureTerms import PressureInit, PressureRC
 from ..pde.NSE_PressureTerms import PressureMatrix, PressureSolve
+from ..pde.NSE_PressureTerms_Thomas import ThomasPressureInit, ThomasPressureSolve
 from ..pde.NSE_SGSTerms import DivStressStaticSGS, DivStressDynamicSGS
 from ..pde.SCL_SGSTerms import DivFluxStaticSGS, DivFluxDynamicSGS
 from ..pde.NSE_AllTerms import RHS_Momentum

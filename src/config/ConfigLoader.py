@@ -150,4 +150,10 @@ if 'rMO_SM'   not in dir(): rMO_SM   = 4.0
 if 'use_double_precision' not in dir():
     use_double_precision = False
 
+# Pressure solver selection.
+# optPressureSolver = 0: LU    — dense matrix + jnp.linalg.solve (original)
+# optPressureSolver = 1: Thomas — tridiagonal Thomas algorithm (faster)
+if 'optPressureSolver' not in dir():
+    optPressureSolver = 0
+
 del _rundir, _config_path, _f

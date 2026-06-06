@@ -52,8 +52,14 @@ ZeRo3D_pad = ZeRo3D_padIni()
 ZeRo3D_pad_fft = ZeRo3D_pad_fftIni()
 
 # Static variables related to pressure solver
-(kr2_pressure, kc2_pressure,
- a_pressure, b_pressure, c_pressure) = PressureInit()
+# optPressureSolver = 0: LU (original)   1: Thomas (tridiagonal, faster)
+if optPressureSolver == 1:
+    (kr2_pressure, kc2_pressure,
+     a_pressure, b_pressure, c_pressure,
+     b_thomas, m_thomas) = ThomasPressureInit()
+else:
+    (kr2_pressure, kc2_pressure,
+     a_pressure, b_pressure, c_pressure) = PressureInit()
 
 
 # ============================================================
@@ -479,10 +485,14 @@ for iteration in range(istep, nsteps+1, 1):
             RHS_u_previous, RHS_v_previous, RHS_w_previous,
             divtz, kr2_pressure, kc2_pressure))
 
-    (p, dpdx, dpdy, dpdz) = (
-        PressureSolve(
+    if optPressureSolver == 1:
+        (p, dpdx, dpdy, dpdz) = ThomasPressureSolve(
             RC_real, RC_imag, fRz_real,
-            a_pressure, b_pressure, c_pressure))
+            b_thomas, m_thomas, c_pressure)
+    else:
+        (p, dpdx, dpdy, dpdz) = PressureSolve(
+            RC_real, RC_imag, fRz_real,
+            a_pressure, b_pressure, c_pressure)
 
     # Add pressure gradient terms to RHS
     RHS_u = RHS_u - dpdx

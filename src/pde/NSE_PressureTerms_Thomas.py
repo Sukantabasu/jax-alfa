@@ -239,9 +239,9 @@ def ThomasPressureSolve(RC_real, RC_imag, fRz_real,
     #
     # Zero mode (0,0): singular — handled by direct integration below.
     # Nyquist modes (x-Nyquist row and y-Nyquist column): aliased — must
-    # be zero in the output.  Zeroing the RHS here means Thomas never
-    # touches these solutions, avoiding both wasted work and any reliance
-    # on solver behaviour for modes we discard.
+    # be zero in the output.  Zeroing the RHS here means Thomas solves
+    # these rows with d=0 and produces x=0, avoiding any reliance on
+    # solver behaviour for modes whose results are discarded.
     # ------------------------------------------------------------------
     RC_r = (RC_real
             .at[0,          0,          :].set(0.0)   # zero mode

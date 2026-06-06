@@ -184,3 +184,6 @@ optMoistureSurfBC = 0
 MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
 # Specific humidity lapse rate above domain top (kg/kg/m); 0 = zero gradient
 q_inversion = 0.0
+
+# Pressure solver: 0 = LU (original), 1 = Thomas (tridiagonal, faster)
+optPressureSolver = 1

@@ -37,6 +37,7 @@ run.log
 *.ini
 *.npy
 *.npz
+*.partial
 
 # Anaconda project files
 anaconda_projects/

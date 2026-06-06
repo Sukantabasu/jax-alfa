@@ -68,7 +68,7 @@ nz = 256
 istep = 1
 
 # Time stepping and simulation time
-dt = 0.5          # unit: sec
+dt = 0.75          # unit: sec
 SimTime = 300000   # unit: sec
 
 # Galilean transformation (m/s)
@@ -158,7 +158,7 @@ RelaxTime  = 300    # unit: s
 # Statistics computation
 # ------------------------------------------------------------
 
-SampleInterval_sec   = 10.0   # collect a sample every N s
+SampleInterval_sec   = 15.0   # collect a sample every N s
 OutputInterval_sec   = 60.0   # output averaged stats every N s
 Output3DInterval_sec = SimTime   # output 3D fields only at the end of the run
 
@@ -183,3 +183,6 @@ optMoistureSurfBC = 0
 MoistureSurfaceBCFile = 'input/MoistureSurfaceBC.npz'
 # Specific humidity lapse rate above domain top (kg/kg/m); 0 = zero gradient
 q_inversion = 0.0
+
+# Pressure solver: 0 = LU (original), 1 = Thomas (tridiagonal, faster)
+optPressureSolver = 1

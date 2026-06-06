@@ -19,6 +19,5 @@ post-processing the packaged 100\ :sup:`3` LASDD-SM run, see the :doc:`Tutorial
    SGS Coefficients <notebooks/SBL_GABLS1_SGSCoefficients>
    Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>
    Structure Functions <notebooks/SBL_GABLS1_StructureFunctions>
-   Structure Functions: ln(r) Fit <notebooks/SBL_GABLS1_StructureFunctions_lnr>
    Horizontal Cross-Sections <notebooks/SBL_GABLS1_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/SBL_GABLS1_VerticalCrossSections>

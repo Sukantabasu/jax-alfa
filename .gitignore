@@ -16,11 +16,14 @@ docs/source/examples/NBL_A94/notebooks/ALFA_Visualization.ipynb
 # Local utility scripts
 push_to_github.sh
 
+# Sandbox (local experiments, not for release)
+sandbox/
+
 # Internal reports
 REPORT_*.md
 
 # Internal notebooks (in preparation for publication)
-docs/source/examples/SBL_GABLS1/notebooks/SBL_GABLS1_StructureFunctions_lnr.ipynb
+*StructureFunctions*.ipynb
 
 # Python
 __pycache__/

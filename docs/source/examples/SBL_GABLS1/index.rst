@@ -20,3 +20,4 @@ post-processing the packaged 100\ :sup:`3` LASDD-SM run, see the :doc:`Tutorial
    Precision Sensitivity <notebooks/SBL_GABLS1_PrecisionSensitivity>
    Horizontal Cross-Sections <notebooks/SBL_GABLS1_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/SBL_GABLS1_VerticalCrossSections>
+   Fourier Spectra <notebooks/SBL_GABLS1_FourSpectrum>

@@ -13,3 +13,4 @@ Neutral BL
    Similarity Theory <notebooks/NBL_A94_SimilarityTheory>
    Horizontal Cross-Sections <notebooks/NBL_A94_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/NBL_A94_VerticalCrossSections>
+   Fourier Spectra <notebooks/NBL_A94_FourSpectrum>

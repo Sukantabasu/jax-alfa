@@ -11,3 +11,4 @@ Convective BL
    Precision Sensitivity <notebooks/CBL_N91_PrecisionSensitivity>
    Horizontal Cross-Sections <notebooks/CBL_N91_HorizontalCrossSections>
    Vertical Cross-Sections <notebooks/CBL_N91_VerticalCrossSections>
+   Fourier Spectra <notebooks/CBL_N91_FourSpectrum>

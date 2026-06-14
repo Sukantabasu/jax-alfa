@@ -8,7 +8,6 @@ src/pde/SCL_SGSTerms_STABSM.py
 # Examples not for public release
 examples/CBL_N91_G3/
 examples/CBL_N91_G5/
-examples/SBL_GABLS4/
 
 docs/source/examples/NBL_A94/notebooks/NBL_A94_SimilarityTheory.ipynb
 docs/source/examples/NBL_A94/notebooks/ALFA_Visualization.ipynb

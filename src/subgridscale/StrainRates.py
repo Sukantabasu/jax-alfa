@@ -238,9 +238,12 @@ def StrainsWnodes_Dealias(
     Returns:
     --------
     S13_pad, S23_pad : ndarray
-        Dealiased shear strain components at W nodes
+        Dealiased shear strain components at W nodes (shape mx, my, nz)
+    S_w : ndarray
+        Non-dealiased strain rate magnitude at W nodes (shape nx, ny, nz);
+        needed by STAB-SM to compute Richardson number against dTHdz
     S_pad : ndarray
-        Dealiased strain rate magnitude at W nodes
+        Dealiased strain rate magnitude at W nodes (shape mx, my, nz)
     """
 
     # Initialize arrays
@@ -280,14 +283,20 @@ def StrainsWnodes_Dealias(
     S13_pad = Dealias1(FFT(S13), ZeRo3D_pad_fft)
     S23_pad = Dealias1(FFT(S23), ZeRo3D_pad_fft)
 
-    # Compute strain rate magnitude at w-levels
+    # Non-dealiased strain rate magnitude (nx, ny, nz) — needed by STAB-SM for Ri
+    S_w = jnp.sqrt(2 * (S11 ** 2 + S22 ** 2 + S33 ** 2 +
+                        2 * S12 ** 2 +
+                        2 * S13 ** 2 +
+                        2 * S23 ** 2))
+
+    # Dealiased strain rate magnitude at w-levels (mx, my, nz)
     S_pad = jnp.sqrt(2 * (S11_pad ** 2 + S22_pad ** 2 + S33_pad ** 2 +
                           2 * S12_pad ** 2 +
                           2 * S13_pad ** 2 +
                           2 * S23_pad ** 2))
 
     return (S13_pad, S23_pad,
-            S_pad)
+            S_w, S_pad)
 
 
 # ====================================================

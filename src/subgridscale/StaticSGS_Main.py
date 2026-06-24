@@ -185,15 +185,12 @@ def StaticSGS(
         # Compute strain rates
         # --------------------------------------
         (S13_pad, S23_pad,
-         S_w_pad) = (
+         S_w, S_w_pad) = (
             StrainsWnodes_Dealias(
                 dudx, dvdx, dwdx,
                 dudy, dvdy, dwdy,
                 dudz, dvdz, dwdz,
                 ZeRo3D, ZeRo3D_pad_fft))
-
-        # create a dummy variable for passing
-        S_w = S_w_pad
 
         # --------------------------------------
         # Compute SGS stresses

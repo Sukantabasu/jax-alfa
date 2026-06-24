@@ -267,14 +267,12 @@ def DynamicSGS(
     if optDealias == 1:
 
         (S13_pad, S23_pad,
-         S_w_pad) = (
+         S_w, S_w_pad) = (
             StrainsWnodes_Dealias(
                 dudx, dvdx, dwdx,
                 dudy, dvdy, dwdy,
                 dudz, dvdz, dwdz,
                 ZeRo3D, ZeRo3D_pad_fft))
-
-        S_w = S_w_pad
 
         if optSgs in [1, 3]:  # SM variants
             (txz, tyz) = (

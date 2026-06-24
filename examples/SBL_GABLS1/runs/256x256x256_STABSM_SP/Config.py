@@ -140,8 +140,8 @@ optSgs = 5
 dynamicSGS_call_time = 1
 
 # Filter to grid ratio (FGR=1: implicit + dealiasing; FGR>=2: explicit)
-# FGR=1 is the standard choice for static models (filter scale = grid scale)
-FGR = 1
+# FGR=2 for consistency with other SGS model runs
+FGR = 2
 
 # Initial SGS coefficients (not used for STAB-SM; kept for compatibility)
 Cs2 = 0.1 ** 2

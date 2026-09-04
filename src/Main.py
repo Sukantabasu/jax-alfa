@@ -408,10 +408,10 @@ for iteration in range(istep, nsteps+1, 1):
         else:
             qHz_q = ZeRo3D; divqm = ZeRo3D
 
-        # stabsmSGSmomentum[14] = Lambda_uvp2_1D (effective Cs^2 profile)
-        Cs2_1D_avg1    = stabsmSGSmomentum[14]
-        Cs2_1D_avg2    = stabsmSGSmomentum[14]
-        Cs2PrRatio_1D  = stabsmSGSmomentum[14]
+        # stabsmSGSmomentum[14] = raw Lambda_uvp2_1D; divide by L^2 → effective Cs^2
+        Cs2_1D_avg1    = stabsmSGSmomentum[14] / L ** 2
+        Cs2_1D_avg2    = stabsmSGSmomentum[14] / L ** 2
+        Cs2PrRatio_1D  = stabsmSGSmomentum[14] / L ** 2
         beta1_1D       = ZeRo1D
         beta2_1D       = ZeRo1D
 

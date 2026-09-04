@@ -22,7 +22,7 @@ File: Config.py
                 code restructuring, and performance optimization
 :Date: 2026-06-14
 :Description: GABLS4 stable BL at Dome C, Antarctica (Stage 3).
-              Domain 400x400x1000 m; 36-hour simulation.
+              Domain 1000x1000x1000 m; 24-hour simulation.
               Grid: 384x384x384, SGS: LASDD-WL,
               Precision: single.
 """
@@ -52,8 +52,8 @@ GPU_ID = 0
 # ------------------------------------------------------------
 
 # Domain size (m)
-l_x = 400
-l_y = 400
+l_x = 1000
+l_y = 1000
 l_z = 1000
 
 # Number of grid points
@@ -70,7 +70,7 @@ istep = 1
 
 # Time stepping and simulation time
 dt = 0.1          # unit: sec
-SimTime = 36 * 3600   # unit: sec
+SimTime = 24 * 3600   # unit: sec
 
 # Galilean transformation (m/s)
 Ugal = 0
@@ -88,8 +88,8 @@ optSurfFlux = 0
 optSurfBC = 2
 
 # Roughness lengths (m)
-z0m = 0.01
-z0T = 0.01
+z0m = 1e-3
+z0T = 1e-4
 
 # Screen-level temperature reference height (m); 0 = use z0T
 zTemperature = 0.0
@@ -116,17 +116,17 @@ Vg2 = 4.5
 # Path to geostrophic wind file (relative to run directory)
 GeoWindFile = 'input/GeoWind.npz'
 
-# Coriolis parameter (1/s); Dome C at 75.1 deg S
-f_coriolis = 1.409e-4
+# Coriolis parameter (1/s); negative for Southern Hemisphere (Dome C, 75.1 deg S)
+f_coriolis = -1.4012e-4
 
 # Potential temperature lapse rate above domain top (K/m)
-inversion = 0.0078
+inversion = 0.0
 
 # Buoyancy calculation: 0 = use reference T_0, 1 = use local THv
 optBuoyancy = 1
 
 # Reference temperature (K)
-T_0 = 271.0
+T_0 = 270.0
 
 # ------------------------------------------------------------
 # Subgrid-scale configuration
@@ -153,7 +153,7 @@ CwlPrRatio = Cwl / 1.0
 
 optDamping = 1       # 1: activate Rayleigh damping
 z_damping  = 700    # unit: m
-RelaxTime  = 60     # unit: s
+RelaxTime  = 300     # unit: s
 
 # ------------------------------------------------------------
 # Statistics computation

@@ -84,35 +84,30 @@ for it in range(len(t_nc)):
     Ug_model[it] = _fu(z)
     Vg_model[it] = _fv(z)
 
-# Step 2: Interpolate temporally from hourly to every dt
-t_tgt = np.arange(nsteps + 1) * dt
-if t_tgt[-1] > t_nc[-1] + 1e-6:
+# Keep the file compact: the core initializer interpolates these hourly
+# profiles onto every model time step at startup.  Expanding here would
+# create multi-GB input files for the 36-hour, dt=0.1 s GABLS4 runs.
+t_tgt_end = nsteps * dt
+if t_tgt_end > t_nc[-1] + 1e-6:
     raise ValueError(
-        f"Simulation end {t_tgt[-1]:.0f} s exceeds GeoWind data end {t_nc[-1]:.0f} s."
+        f"Simulation end {t_tgt_end:.0f} s exceeds GeoWind data end {t_nc[-1]:.0f} s."
     )
-
-Ug_series = np.zeros((nsteps + 1, nz))
-Vg_series = np.zeros((nsteps + 1, nz))
-for k in range(nz):
-    _itu = interp1d(t_nc, Ug_model[:, k], kind='linear')
-    _itv = interp1d(t_nc, Vg_model[:, k], kind='linear')
-    Ug_series[:, k] = _itu(t_tgt)
-    Vg_series[:, k] = _itv(t_tgt)
 
 input_dir = os.path.join(_script_dir, 'input')
 os.makedirs(input_dir, exist_ok=True)
 
 out_path = os.path.join(input_dir, 'GeoWind.npz')
 np.savez(out_path,
-         Ug_series  = Ug_series.astype(np.float64),
-         Vg_series  = Vg_series.astype(np.float64),
+         t_profile  = t_nc.astype(np.float64),
+         Ug_profile = Ug_model.astype(np.float64),
+         Vg_profile = Vg_model.astype(np.float64),
          dt_geo     = np.float64(dt),
          optGeoWind = np.int32(1))
 
 print(f"GeoWind file written to {out_path}")
-print(f"  nsteps+1 = {nsteps + 1}  (dt = {dt} s, SimTime = {SimTime} s)")
-print(f"  nz = {nz},  dz = {dz:.4f} m")
-print(f"  Ug range: [{Ug_series.min():.3f}, {Ug_series.max():.3f}] m/s")
-print(f"  Vg range: [{Vg_series.min():.3f}, {Vg_series.max():.3f}] m/s")
-print(f"  Ug at t=0, z[0]={z[0]:.2f} m: {Ug_series[0, 0]:.4f} m/s")
-print(f"  Vg at t=0, z[0]={z[0]:.2f} m: {Vg_series[0, 0]:.4f} m/s")
+print(f"  compact profiles: nt={len(t_nc)}, nz={nz}  (dt = {dt} s, SimTime = {SimTime} s)")
+print(f"  dz = {dz:.4f} m")
+print(f"  Ug range: [{Ug_model.min():.3f}, {Ug_model.max():.3f}] m/s")
+print(f"  Vg range: [{Vg_model.min():.3f}, {Vg_model.max():.3f}] m/s")
+print(f"  Ug at t=0, z[0]={z[0]:.2f} m: {Ug_model[0, 0]:.4f} m/s")
+print(f"  Vg at t=0, z[0]={z[0]:.2f} m: {Vg_model[0, 0]:.4f} m/s")

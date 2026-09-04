@@ -152,7 +152,7 @@ CwlPrRatio = Cwl / 1.0
 # ------------------------------------------------------------
 # STAB-SM parameters (defaults shown; override here if needed)
 # ------------------------------------------------------------
-# CsMO_SM  = 0.17          # Smagorinsky coefficient
+CsMO_SM  = 0.10            # reduced from 0.17; compensates for FGR=2 (Brown et al. 1994)
 # aMO_SM   = 1.0 / 0.7    # heat stability parameter (= 1/Pr_t_neutral)
 # bMO_SM   = 40.0          # unstable fh coefficient
 # cMO_SM   = 16.0          # unstable fm coefficient
@@ -160,7 +160,7 @@ CwlPrRatio = Cwl / 1.0
 # gMO_SM   = 1.2           # stable fh correction
 # hMO_SM   = 0.0           # stable fm correction
 # RicMO_SM = 0.25          # critical Richardson number
-# rMO_SM   = 4.0           # stable stability function exponent
+rMO_SM   = 4.0             # Brown et al. (1994); default 4.0 is too aggressive
 
 # ------------------------------------------------------------
 # Damping layer configuration

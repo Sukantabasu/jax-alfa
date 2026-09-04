@@ -137,8 +137,8 @@ optSgs = 3
 # Dynamic SGS update frequency (every N steps)
 dynamicSGS_call_time = 1
 
-# Filter to grid ratio (FGR=1: implicit filtering; FGR>=2: explicit + dealiasing)
-FGR = 1
+# Filter to grid ratio (FGR=1: implicit + dealiasing; FGR>=2: explicit)
+FGR = 2
 
 # Initial SGS coefficients (used before first dynamic update)
 Cs2 = 0.1 ** 2        # SM models: initial Cs^2

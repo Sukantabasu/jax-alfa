@@ -70,7 +70,7 @@ nz = 256
 istep = 1
 
 # Time stepping and simulation time
-dt = 0.05          # unit: sec
+dt = 0.025          # unit: sec
 SimTime = 32400   # unit: sec
 
 # Galilean transformation (m/s)

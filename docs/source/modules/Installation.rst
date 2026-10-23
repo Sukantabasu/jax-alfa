@@ -63,18 +63,23 @@ Running a Simulation
 Set the environment variable ``JAXALFA_RUNDIR`` to point to a run
 directory, then launch the solver::
 
-    export JAXALFA_RUNDIR=/path/to/jax-alfa/examples/SBL_GABLS1/runs/40x40x40_LAD_SM_SP
-    python $JAXALFA_RUNDIR/CreateInputs_GABLS1_40.py
-    python $JAXALFA_RUNDIR/CreateSurfaceBC_GABLS1_40.py
+    export JAXALFA_RUNDIR=/path/to/jax-alfa/examples/SBL_GABLS1/runs/64x64x64_LASDD_SM_SP
+    python $JAXALFA_RUNDIR/CreateInputs_SBL_GABLS1.py
+    python $JAXALFA_RUNDIR/CreateSurfaceBC_GABLS1.py
     python -m src.Main
+
+Each run directory provides the ``Create*.py`` scripts it needs (initial
+conditions, and where applicable surface boundary conditions, geostrophic
+wind and large-scale advection forcing); run all of them before the solver.
 
 Always run ``python -m src.Main`` from the repository root so that the
 ``src`` package is importable.
 
-Alternatively, use the provided convenience script after editing
-``JAXALFA_RUNDIR`` inside it to point to your run directory::
+Alternatively, use the provided convenience script, which deletes any previous
+output of that run directory, runs all of its ``Create*.py`` scripts and then the
+solver, writing ``run.log`` in the run directory::
 
-    bash run_simulation.sh
+    bash scripts/run_simulation.sh examples/SBL_GABLS1/runs/64x64x64_LASDD_SM_SP
 
 Output files are written to ``$JAXALFA_RUNDIR/output/`` as compressed
 NumPy archives (``*.npz``).  See the :doc:`Tutorial </tutorial/Tutorial_notebook>`
@@ -100,13 +105,13 @@ automatically; ``GPU_ID`` is ignored in that case.
 Running on a SLURM Cluster
 --------------------------
 
-A ready-to-use SLURM batch script ``run_simulation_dgx.sh`` is included in
-the repository root.  Before submitting, edit the following items inside the
+A ready-to-use SLURM batch script ``scripts/run_simulation_dgx.sh`` is included
+in the repository.  Before submitting, edit the following items inside the
 script:
 
 1. **Path variables** — set ``JAXALFA_ROOT`` and ``JAXALFA_RUNDIR``::
 
-       export JAXALFA_ROOT=/path/to/JAXALFA0.1
+       export JAXALFA_ROOT=/path/to/jax-alfa
        export JAXALFA_RUNDIR=$JAXALFA_ROOT/examples/SBL_GABLS1/runs/...
 
 2. **Conda initialisation** — update the ``source`` path to your cluster's
@@ -120,11 +125,14 @@ script:
        conda activate /path/to/anaconda3/envs/jax-gpu
 
 4. **SBATCH directives** — adjust the time limit, memory, and GPU count at
-   the top of the script to match your cluster's configuration.
+   the top of the script (and, if your cluster requires them, the account,
+   partition and QoS) to match your cluster's configuration.
 
-Then submit with::
+Then submit from the repository root with::
 
-    sbatch run_simulation_dgx.sh
+    mkdir -p slurmout
+    sbatch scripts/run_simulation_dgx.sh
 
-The script prints GPU diagnostics, regenerates all input files, and launches
-the solver with unbuffered output piped to ``$JAXALFA_RUNDIR/run.log``.
+The script prints GPU diagnostics, deletes any previous output of the run
+directory, regenerates all input files, and launches the solver with unbuffered
+output written to ``$JAXALFA_RUNDIR/run.log``.

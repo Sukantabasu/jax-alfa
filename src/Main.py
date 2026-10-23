@@ -143,6 +143,16 @@ if optSgs == 5:
     Cs2PrRatio_1D = ZeRo1D.copy()
     beta1_1D      = ZeRo1D.copy()
     beta2_1D      = ZeRo1D.copy()
+
+# For static Smagorinsky (optSgs=0) the coefficients are the constant Cs2 and
+# Cs2PrRatio fields used by the static branch; both averaging conventions equal
+# Cs2, and the scale-dependence parameters are 1 (scale-invariant model).
+if optSgs == 0:
+    Cs2_1D_avg1   = ZeRo1D + Cs2
+    Cs2_1D_avg2   = ZeRo1D + Cs2
+    Cs2PrRatio_1D = ZeRo1D + Cs2PrRatio
+    beta1_1D      = ZeRo1D + 1.0
+    beta2_1D      = ZeRo1D + 1.0
 OutputDir = os.path.join(os.environ['JAXALFA_RUNDIR'], 'output')
 os.makedirs(OutputDir, exist_ok=True)
 

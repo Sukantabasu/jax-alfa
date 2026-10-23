@@ -11,8 +11,19 @@ push_to_github.sh
 # Sandbox (local experiments, not for release)
 sandbox/
 
+# Code reviews by coding agents (Codex, Antigravity, Claude)
+CodeReview/
+
+# Reports and manuscripts (keep outside the repo; guard in case one is created here)
+Text/
+
 # Internal reports
 REPORT_*.md
+
+# Coding-agent instructions and work list (contain host/user details)
+AGENTS.md
+GEMINI.md
+TODO.md
 
 # Internal notebooks (in preparation for publication)
 *StructureFunctions*.ipynb
@@ -51,3 +62,19 @@ docs/build/
 # Vim swap files
 *.swp
 *.swo
+
+# Per-machine run trees and local helper scripts (not for release)
+examples_A6000/
+examples_A6000ada/
+examples_RTX3070/
+examples_sandbox/
+examples_sandbox_A6000ada/
+shellScripts/
+
+# Re-run campaign bookkeeping inside run directories (machine-generated)
+examples/**/runs/*/status.txt
+examples/**/runs/*/status.tmp
+examples/**/runs/*/manifest.txt
+examples/**/runs/*/download.txt
+examples/**/runs/*/output.incoming/
+examples/**/runs/*/meta.incoming/

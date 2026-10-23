@@ -80,6 +80,7 @@ def MOSTstable(z_over_L):
     return psi_m, psi_h, fi_m, fi_h
 
 
+@jax.jit
 def MOSTunstable(z_over_L):
     """
     Compute Monin-Obukhov stability functions for unstable conditions

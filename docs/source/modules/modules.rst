@@ -14,6 +14,7 @@ API Reference
    NSE_AdvectionTerms
    NSE_BuoyancyTerms
    NSE_PressureTerms
+   NSE_PressureTerms_Thomas
    NSE_SGSTerms
    NSE_TimeAdvancement
    SCL_AllTerms

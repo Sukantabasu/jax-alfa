@@ -65,6 +65,7 @@ Requirements
 
    NVIDIA A100 (80 GB) <benchmark/Benchmark_A100>
    Hardware Platform Comparison <benchmark/Benchmark_PlatformComparison>
+   Simulation Log <benchmark/SimulationLog>
 
 .. toctree::
    :maxdepth: 2

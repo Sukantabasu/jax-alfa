@@ -174,9 +174,10 @@ def ThomasPressureInit():
         else:
             kr2_pressure = kr2_pressure.at[i, :].set(i - nx)
 
+    # y-wavenumbers scaled by l_x/l_y: y-period is 2*pi*(l_y/l_x) non-dimensional
     kc2_pressure = jnp.zeros((nx, ny_rfft))
     for j in range(ny_rfft):
-        kc2_pressure = kc2_pressure.at[:, j].set(j)
+        kc2_pressure = kc2_pressure.at[:, j].set(j * (l_x / l_y))
 
     # ------------------------------------------------------------------
     # Tridiagonal coefficients  (identical to PressureInit)

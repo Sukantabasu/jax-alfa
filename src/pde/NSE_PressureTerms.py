@@ -77,9 +77,10 @@ def PressureInit():
             kr2_pressure = kr2_pressure.at[i, :].set(i - nx)
 
     # For y-direction, use only positive frequencies
+    # (scaled by l_x/l_y: y-period is 2*pi*(l_y/l_x) in non-dimensional units)
     kc2_pressure = jnp.zeros((nx, ny_rfft))
     for j in range(ny_rfft):
-        kc2_pressure = kc2_pressure.at[:, j].set(j)
+        kc2_pressure = kc2_pressure.at[:, j].set(j * (l_x / l_y))
 
     # Create tridiagonal matrix coefficients
     a_pressure = jnp.ones(nz + 1) / (dz ** 2)  # sub-diagonal

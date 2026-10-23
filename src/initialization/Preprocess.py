@@ -87,7 +87,8 @@ def Wavenumber():
     """
 
     kx = jnp.fft.fftfreq(nx, 1 / nx)
-    ky = jnp.fft.rfftfreq(ny, 1 / ny)
+    # y-period is 2*pi*(l_y/l_x) in non-dimensional units
+    ky = jnp.fft.rfftfreq(ny, 1 / ny) * (l_x / l_y)
 
     # Zeroing Nyquist frequencies to avoid instabilities
     kx = kx.at[nx // 2].set(0)

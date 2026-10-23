@@ -75,8 +75,9 @@ qm_sfc = MoistureFlux * jnp.ones((nx, ny)) / (u_scale * Q_scale)
 q_inversion_nondim = q_inversion * (z_scale / Q_scale)
 
 # Non-dimensional grid spacing
+# (x-length is 2*pi by choice of z_scale; y-length is 2*pi*(l_y/l_x))
 dx = 2 * pi / nx
-dy = 2 * pi / ny
+dy = 2 * pi * (l_y / l_x) / ny
 dz = (l_z / z_scale) / (nz - 1)
 idz = 1.0 / dz
 

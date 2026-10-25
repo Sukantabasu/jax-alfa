@@ -66,6 +66,7 @@ docs/build/
 # Per-machine run trees and local helper scripts (not for release)
 examples_A6000/
 examples_A6000ada/
+examples_H100/
 examples_RTX3070/
 examples_sandbox/
 examples_sandbox_A6000ada/

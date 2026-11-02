@@ -120,7 +120,7 @@ GeoWindFile = 'input/GeoWind.npz'
 f_coriolis = -1.4012e-4
 
 # Potential temperature lapse rate above domain top (K/m)
-inversion = 0.0
+inversion = 0.0078
 
 # Buoyancy calculation: 0 = use reference T_0, 1 = use local THv
 optBuoyancy = 1

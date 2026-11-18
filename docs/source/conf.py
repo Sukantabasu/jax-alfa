@@ -9,6 +9,13 @@ project_root = os.path.abspath(os.path.join(docs_dir, '../..'))
 # Add it to Python's path
 sys.path.insert(0, os.path.abspath('../..'))
 
+# src.config.ConfigLoader requires JAXALFA_RUNDIR (a dir holding Config.py);
+# without it every autodoc import fails. Point it at a docs-only Config so a
+# docs build can never touch a real run directory. src.Main is a script and
+# must never be autodoc'ed (importing it runs a simulation).
+os.environ.setdefault('JAXALFA_RUNDIR', os.path.join(docs_dir, '_autodoc'))
+os.environ.setdefault('JAX_PLATFORMS', 'cpu')
+
 # Project information
 project = 'JAX-ALFA'
 copyright = '2025–2026, Sukanta Basu'

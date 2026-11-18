@@ -1,11 +1,6 @@
 Main Program
 ============
 
-.. automodule:: src.Main
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Source Code: Main
 -----------------
 

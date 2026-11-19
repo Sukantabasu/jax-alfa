@@ -139,18 +139,46 @@ def _MaxRealRootBetaHost(C):
         bmax = np.max(np.where(real, r.real, 0.0), axis=-1)
         return np.where((bmax > 0.0) & (bmax < 5.0), bmax, 1.0)
 
+    # A leading coefficient is treated as zero (degree reduced) only when the
+    # companion-matrix entries c_i/c_0 would exceed the single-precision range,
+    # the criterion of polyroots.m; the removed root is then effectively at
+    # infinity. Smaller leading coefficients (one large root) are kept.
+    BIG = float(np.finfo(np.float32).max)
+    with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+        ratio = np.abs(C[:, 1:] / C[:, :1])
     finite = np.all(np.isfinite(C), axis=1)
-    full = finite & (C[:, 0] != 0.0)
+    full = finite & (C[:, 0] != 0.0) & np.all(ratio <= BIG, axis=1)
+
+    def roots_reduced(c):
+        """Roots after removing negligible leading coefficients (polyroots rule)."""
+        c = np.trim_zeros(c, 'f')
+        while c.size >= 2:
+            with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
+                q = np.abs(c[1:] / c[0])
+            if np.all(q <= BIG):
+                return np.roots(c)
+            c = np.trim_zeros(c[1:], 'f')
+        return np.zeros(0)
+
+    def solve_one(k):
+        try:
+            r = roots_reduced(C[k])
+        except np.linalg.LinAlgError:
+            return 1.0
+        return select(r[None, :])[0] if r.size else 1.0
+
     if np.any(full):
         c = C[full]
         A = np.zeros((c.shape[0], deg, deg))
         A[:, 0, :] = -c[:, 1:] / c[:, :1]
         A[:, np.arange(1, deg), np.arange(deg - 1)] = 1.0
-        beta[full] = select(np.linalg.eigvals(A))
+        try:
+            beta[full] = select(np.linalg.eigvals(A))
+        except np.linalg.LinAlgError:        # never let one level stop the run
+            for k in np.flatnonzero(full):
+                beta[k] = solve_one(k)
     for k in np.flatnonzero(finite & ~full):
-        c = np.trim_zeros(C[k], 'f')
-        if c.size >= 2:
-            beta[k] = select(np.roots(c)[None, :])[0]
+        beta[k] = solve_one(k)
     return beta
 
 

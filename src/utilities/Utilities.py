@@ -30,6 +30,7 @@ File: Utilities.py
 # ============================================================
 
 import jax
+import numpy as np
 import jax.numpy as jnp
 
 
@@ -116,98 +117,69 @@ def Imfilter(x):
 
 
 # ============================================================
-# All roots of a polynomial (Laguerre with deflation)
+# Scale-dependence parameter from the LASDD polynomial
 # ============================================================
 
-def _LaguerreIterate(p, x0, n_iter):
+def _MaxRealRootBetaHost(C):
     """
-    Fixed number of Laguerre steps for the polynomial p (descending
-    coefficients, complex) starting from x0. Steps are skipped once the
-    residual is exactly zero. Used by PolyRootsAll.
+    Host (NumPy, float64) part of MaxRealRootBeta: all roots of each row of C
+    (descending coefficients) from the eigenvalues of the companion matrix, as
+    numpy.roots and the polyroots function of the original MATLAB code do,
+    then the MATLAB selection rule. Rows with a non-zero leading coefficient
+    are solved in one batched eigenvalue call; rows with exact leading zeros
+    (lower degree) use numpy.roots.
     """
-    n = p.shape[0] - 1
-    dp = jnp.polyder(p)
-    d2p = jnp.polyder(dp)
-    ap = jnp.abs(p)
-    eps = jnp.finfo(jnp.real(p).dtype).eps
+    C = np.asarray(C, dtype=np.float64)
+    nlev, ncoef = C.shape
+    deg = ncoef - 1
+    beta = np.ones(nlev)
 
-    def step(_, x):
-        f = jnp.polyval(p, x)
-        df = jnp.polyval(dp, x)
-        d2f = jnp.polyval(d2p, x)
-        # converged: residual at round-off level relative to sum |p_i| |x|^i
-        at_root = jnp.abs(f) <= 4 * eps * jnp.polyval(ap, jnp.abs(x))
-        f_nz = jnp.where(at_root, 1.0 + 0j, f)
-        G = df / f_nz
-        H = G ** 2 - d2f / f_nz
-        sq = jnp.sqrt((n - 1) * (n * H - G ** 2))
-        den = jnp.where(jnp.abs(G + sq) >= jnp.abs(G - sq), G + sq, G - sq)
-        den = jnp.where(den == 0, 1.0 + 0j, den)
-        dx = n / den
-        ok = (~at_root) & jnp.isfinite(jnp.real(dx)) & jnp.isfinite(jnp.imag(dx))
-        return jnp.where(ok, x - dx, x)
+    def select(r):
+        real = np.abs(r.imag) <= 1e-10 * (1.0 + np.abs(r))
+        bmax = np.max(np.where(real, r.real, 0.0), axis=-1)
+        return np.where((bmax > 0.0) & (bmax < 5.0), bmax, 1.0)
 
-    return jax.lax.fori_loop(0, n_iter, step, x0)
+    finite = np.all(np.isfinite(C), axis=1)
+    full = finite & (C[:, 0] != 0.0)
+    if np.any(full):
+        c = C[full]
+        A = np.zeros((c.shape[0], deg, deg))
+        A[:, 0, :] = -c[:, 1:] / c[:, :1]
+        A[:, np.arange(1, deg), np.arange(deg - 1)] = 1.0
+        beta[full] = select(np.linalg.eigvals(A))
+    for k in np.flatnonzero(finite & ~full):
+        c = np.trim_zeros(C[k], 'f')
+        if c.size >= 2:
+            beta[k] = select(np.roots(c)[None, :])[0]
+    return beta
 
 
-def PolyRootsAll(coeffs, n_iter=60, n_polish=8):
+def MaxRealRootBeta(C):
     """
-    All roots of a polynomial, by Laguerre's method with deflation.
+    Scale-dependence parameter beta(z) from the fifth-order LASDD polynomials,
+    one per vertical level, with the selection rule of the original MATLAB
+    code (MLp_LocSMAG.m, MLp_LocScSMAG.m): complex roots count as 0, beta is
+    the largest real root, and beta = 1 (scale invariance) if that root is not
+    in (0, 5) or the polynomial is degenerate.
 
-    Each root is found on the deflated polynomial, polished on the original
-    polynomial, and divided out (synthetic division). Works on GPU (no
-    eigenvalue solver needed) and returns as many roots as the degree,
-    unlike multi-start Laguerre, which can converge to the same root from
-    every start and miss real roots (found in the 2026-11-19 audit).
+    The roots are computed on the host in float64 from the companion-matrix
+    eigenvalues (jax.pure_callback), also in single-precision runs. In float32
+    on the device, clustered real roots can merge into complex pairs and
+    deflation errors accumulate; JAX offers no eigenvalue solver on GPU. One
+    call per dynamic-SGS evaluation with nz x 6 coefficients (2026-11-19).
 
     Parameters:
     -----------
-    coeffs : ndarray
-        Coefficients in descending order of degree; the leading coefficient
-        must be non-zero (callers check this).
+    C : ndarray of shape (nz, 6)
+        Polynomial coefficients per level, descending order of degree.
 
     Returns:
     --------
-    roots : complex ndarray of shape (degree,)
+    beta : ndarray of shape (nz,)
     """
-    cdtype = jnp.complex128 if jax.config.jax_enable_x64 else jnp.complex64
-    c = coeffs.astype(cdtype)
-    scale = jnp.max(jnp.abs(c))
-    c = c / jnp.where(scale > 0, scale, 1.0)
-    p = c
-    roots = []
-    for _ in range(c.shape[0] - 1):
-        if p.shape[0] == 2:
-            r = -p[1] / p[0]
-        else:
-            r = _LaguerreIterate(p, jnp.asarray(0.0 + 0j, dtype=cdtype), n_iter)
-        r = _LaguerreIterate(c, r, n_polish)
-        roots.append(r)
-        # synthetic division by (x - r), remainder discarded
-        q = [p[0]]
-        for a in p[1:-1]:
-            q.append(a + r * q[-1])
-        p = jnp.stack(q)
-    return jnp.stack(roots)
-
-
-def MaxRealRootBeta(coeffs):
-    """
-    Scale-dependence parameter from the fifth-order LASDD polynomial, with the
-    selection rule of the original MATLAB code (MLp_LocSMAG.m, MLp_LocScSMAG.m):
-    complex roots count as 0, beta is the largest real root, and beta = 1
-    (scale invariance) if that root is not in (0, 5) or if the polynomial is
-    degenerate (vanishing leading coefficient).
-    """
-    rdtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
-    eps = jnp.finfo(rdtype).eps
-    lead_ok = jnp.abs(coeffs[0]) > 10 * eps * jnp.max(jnp.abs(coeffs))
-    safe = jnp.where(lead_ok, coeffs, jnp.ones_like(coeffs))
-    roots = PolyRootsAll(safe)
-    is_real = jnp.abs(jnp.imag(roots)) <= jnp.sqrt(eps) * (1 + jnp.abs(roots))
-    bmax = jnp.max(jnp.where(is_real, jnp.real(roots), 0.0))
-    valid = lead_ok & (bmax > 0) & (bmax < 5.0)
-    return jnp.where(valid, bmax, 1.0)
+    out = jax.ShapeDtypeStruct((C.shape[0],), C.dtype)
+    return jax.pure_callback(
+        lambda c: _MaxRealRootBetaHost(c).astype(c.dtype), out, C)
 
 
 # ============================================================

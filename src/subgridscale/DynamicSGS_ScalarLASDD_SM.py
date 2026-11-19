@@ -69,15 +69,13 @@ def ComputeBeta2(ff, ee, dd, cc, bb, aa):
         1D array of the maximum valid real root for each vertical level
     """
 
-    # All five roots (Laguerre with deflation) and the selection rule of the
-    # original MATLAB code: largest real root, beta = 1 unless it lies in (0, 5).
-    # (Until 2026-11-19: multi-start Laguerre could miss real roots, and the
-    # largest root inside (0, 5) was taken instead of applying this rule.)
-    def find_roots_for_level(k):
-        coeffs = jnp.array([ff[k], ee[k], dd[k], cc[k], bb[k], aa[k]])
-        return MaxRealRootBeta(coeffs)
-
-    return jax.vmap(find_roots_for_level)(jnp.arange(ff.shape[0]))
+    # All five roots of every level's polynomial (float64 companion-matrix
+    # eigenvalues on the host) and the selection rule of the original MATLAB
+    # code: largest real root, beta = 1 unless it lies in (0, 5).
+    # (Until 2026-11-19: multi-start Laguerre in working precision could miss
+    # real roots, and the largest root inside (0, 5) was taken instead.)
+    C = jnp.stack([ff, ee, dd, cc, bb, aa], axis=1)
+    return MaxRealRootBeta(C)
 
 
 # ===================================================
@@ -218,54 +216,58 @@ def ScalarLASDD(
     a2_terms = (LTH11 * SdTHdx_hat +
                 LTH12 * SdTHdy_hat +
                 LTH13 * SdTHdz_hat)
-    a2 = PlanarMean((L ** 2) * a2_terms)
+    a2 = PlanarMean(a2_terms)
 
     b2_terms = (LTH11 * S_hat * dTHdx_hat +
                 LTH12 * S_hat * dTHdy_hat +
                 LTH13 * S_hat * dTHdz_hat)
-    b2 = PlanarMean((-L ** 2 * TFR ** 2) * b2_terms)
+    b2 = PlanarMean((-TFR ** 2) * b2_terms)
 
     c2_terms = (SdTHdx_hat ** 2 +
                 SdTHdy_hat ** 2 +
                 SdTHdz_hat ** 2)
-    c2 = PlanarMean((L ** 4) * c2_terms)
+    c2 = PlanarMean(c2_terms)
 
     d2_terms = (SdTHdx_hat * S_hat * dTHdx_hat +
                 SdTHdy_hat * S_hat * dTHdy_hat +
                 SdTHdz_hat * S_hat * dTHdz_hat)
-    d2 = PlanarMean((-2 * L ** 4 * TFR ** 2) * d2_terms)
+    d2 = PlanarMean((-2 * TFR ** 2) * d2_terms)
 
     e2_terms = ((S_hat * dTHdx_hat) ** 2 +
                 (S_hat * dTHdy_hat) ** 2 +
                 (S_hat * dTHdz_hat) ** 2)
-    e2 = PlanarMean((L ** 4 * TFR ** 4) * e2_terms)
+    e2 = PlanarMean((TFR ** 4) * e2_terms)
 
     a4_terms = (QTH11 * SdTHdx_hatd +
                 QTH12 * SdTHdy_hatd +
                 QTH13 * SdTHdz_hatd)
-    a4 = PlanarMean((L ** 2) * a4_terms)
+    a4 = PlanarMean(a4_terms)
 
     b4_terms = (QTH11 * S_hatd * dTHdx_hatd +
                 QTH12 * S_hatd * dTHdy_hatd +
                 QTH13 * S_hatd * dTHdz_hatd)
-    b4 = PlanarMean((-L ** 2 * TFR ** 4) * b4_terms)
+    b4 = PlanarMean((-TFR ** 4) * b4_terms)
 
     c4_terms = (SdTHdx_hatd ** 2 +
                 SdTHdy_hatd ** 2 +
                 SdTHdz_hatd ** 2)
-    c4 = PlanarMean((L ** 4) * c4_terms)
+    c4 = PlanarMean(c4_terms)
 
     d4_terms = (SdTHdx_hatd * S_hatd * dTHdx_hatd +
                 SdTHdy_hatd * S_hatd * dTHdy_hatd +
                 SdTHdz_hatd * S_hatd * dTHdz_hatd)
-    d4 = PlanarMean((-2 * L ** 4 * TFR ** 4) * d4_terms)
+    d4 = PlanarMean((-2 * TFR ** 4) * d4_terms)
 
     e4_terms = ((S_hatd * dTHdx_hatd) ** 2 +
                 (S_hatd * dTHdy_hatd) ** 2 +
                 (S_hatd * dTHdz_hatd) ** 2)
-    e4 = PlanarMean((L ** 4 * TFR ** 8) * e4_terms)
+    e4 = PlanarMean((TFR ** 8) * e4_terms)
 
     # Compute polynomial coefficients for beta2
+    # The common factor L^6 of every term (L^2 in a, b and L^4 in c, d, e, as in
+    # MLp_LocScSMAG.m) is divided out: the roots are unchanged and the
+    # coefficients cannot underflow in single precision (2026-11-19). T_up and
+    # T_dn below keep their L factors (they set the coefficient value).
     aa = a2 * c4 - a4 * c2
     bb = -a4 * d2 + b2 * c4
     cc = -c2 * b4 + a2 * d4 - a4 * e2

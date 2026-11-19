@@ -69,8 +69,8 @@ def ComputeBeta2(ff, ee, dd, cc, bb, aa):
         1D array of the maximum valid real root for each vertical level
     """
 
-    # All five roots of every level's polynomial (float64 companion-matrix
-    # eigenvalues on the host) and the selection rule of the original MATLAB
+    # All five roots of every level's polynomial (Aberth-Ehrlich on the device,
+    # working precision) and the selection rule of the original MATLAB
     # code: largest real root, beta = 1 unless it lies in (0, 5).
     # (Until 2026-11-19: multi-start Laguerre in working precision could miss
     # real roots, and the largest root inside (0, 5) was taken instead.)

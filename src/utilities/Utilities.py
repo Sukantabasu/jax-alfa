@@ -120,68 +120,101 @@ def Imfilter(x):
 # Scale-dependence parameter from the LASDD polynomial
 # ============================================================
 
-def _MaxRealRootBetaHost(C):
+def _PolyRatio(Cs, z):
     """
-    Host (NumPy, float64) part of MaxRealRootBeta: all roots of each row of C
-    (descending coefficients) from the eigenvalues of the companion matrix, as
-    numpy.roots and the polyroots function of the original MATLAB code do,
-    then the MATLAB selection rule. Rows with a non-zero leading coefficient
-    are solved in one batched eigenvalue call; rows with exact leading zeros
-    (lower degree) use numpy.roots.
+    Newton correction P(z)/P'(z) of the polynomials with descending coefficients
+    Cs (nz, n+1), at the points z (nz, n). For |z| > 1 the reversed polynomial
+    R(y) = y^n P(1/y) is used, P/P' = z R / (n R - y R'), so that large roots
+    never overflow.
     """
-    C = np.asarray(C, dtype=np.float64)
+    n = Cs.shape[1] - 1
+    c = Cs.astype(z.dtype)[:, None, :]          # (nz, 1, n+1)
+
+    # direct Horner (|z| <= 1)
+    p = jnp.broadcast_to(c[..., 0], z.shape)
+    dp = jnp.zeros_like(z)
+    for i in range(1, n + 1):
+        dp = dp * z + p
+        p = p * z + c[..., i]
+    w_in = p / dp
+
+    # reversed Horner in y = 1/z (|z| > 1): R(y) = sum_i Cs_i y^i
+    y = 1.0 / jnp.where(z == 0, 1.0, z)
+    r = jnp.broadcast_to(c[..., n], z.shape)
+    dr = jnp.zeros_like(z)
+    for i in range(n - 1, -1, -1):
+        dr = dr * y + r
+        r = r * y + c[..., i]
+    w_out = z * r / (n * r - y * dr)
+
+    return jnp.where(jnp.abs(z) <= 1.0, w_in, w_out)
+
+
+def PolyRootsAberth(C, n_iter=80):
+    """
+    All roots of real polynomials, one per row of C (nz, n+1; descending order),
+    by the Aberth-Ehrlich simultaneous iteration, in the working precision on the
+    device (vectorized over rows; no deflation, no host callback).
+
+    Leading coefficients are removed (degree reduced) with the rule of
+    polyroots.m of the original MATLAB code: while some |c_i/c_0| exceeds the
+    single-precision range, the polynomial restarts at the first such c_i. The
+    removed roots are effectively at infinity; the shift leaves roots at 0,
+    which do not affect the beta selection rule.
+
+    Returns:
+    --------
+    z : complex ndarray (nz, n)
+        Roots.
+    ok : bool ndarray (nz,)
+        False for rows that are non-finite, all zero, or of degree 0.
+    """
     nlev, ncoef = C.shape
-    deg = ncoef - 1
-    beta = np.ones(nlev)
+    n = ncoef - 1
+    cdt = jnp.complex128 if C.dtype == jnp.float64 else jnp.complex64
 
-    def select(r):
-        real = np.abs(r.imag) <= 1e-10 * (1.0 + np.abs(r))
-        bmax = np.max(np.where(real, r.real, 0.0), axis=-1)
-        return np.where((bmax > 0.0) & (bmax < 5.0), bmax, 1.0)
+    finite = jnp.all(jnp.isfinite(C), axis=1)
+    Cn = jnp.where(finite[:, None], C, 0.0)
+    cmax = jnp.max(jnp.abs(Cn), axis=1)
+    Cn = Cn / jnp.where(cmax > 0, cmax, 1.0)[:, None]       # roots unchanged
 
-    # A leading coefficient is treated as zero (degree reduced) only when the
-    # companion-matrix entries c_i/c_0 would exceed the single-precision range,
-    # the criterion of polyroots.m; the removed root is then effectively at
-    # infinity. Smaller leading coefficients (one large root) are kept.
+    # degree reduction (polyroots.m rule)
     BIG = float(np.finfo(np.float32).max)
-    with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
-        ratio = np.abs(C[:, 1:] / C[:, :1])
-    finite = np.all(np.isfinite(C), axis=1)
-    full = finite & (C[:, 0] != 0.0) & np.all(ratio <= BIG, axis=1)
+    idx = jnp.arange(ncoef)
+    s = jnp.zeros(nlev, dtype=jnp.int32)
+    for _ in range(n):
+        lead = jnp.abs(jnp.take_along_axis(Cn, s[:, None], axis=1))
+        off = (idx[None, :] > s[:, None]) & (jnp.abs(Cn) > BIG * lead)
+        s = jnp.where(jnp.any(off, axis=1), jnp.argmax(off, axis=1), s)
+    ok = finite & (cmax > 0) & (s < n)
+    jj = idx[None, :] + s[:, None]
+    Cs = jnp.where(jj <= n, jnp.take_along_axis(Cn, jnp.clip(jj, 0, n), axis=1), 0.0)
+    benign = jnp.zeros(ncoef, Cn.dtype).at[0].set(1.0).at[n].set(-1.0)   # x^n - 1
+    Cs = jnp.where(ok[:, None], Cs, benign[None, :])
 
-    def roots_reduced(c):
-        """Roots after removing negligible leading coefficients (polyroots rule)."""
-        c = np.trim_zeros(c, 'f')
-        while c.size >= 2:
-            with np.errstate(divide='ignore', invalid='ignore', over='ignore'):
-                q = np.abs(c[1:] / c[0])
-            if np.all(q <= BIG):
-                return np.roots(c)
-            c = np.trim_zeros(c[1:], 'f')
-        return np.zeros(0)
+    # initial points: circle of radius max_i |c_i/c_0|^(1/i), rotated off the
+    # real axis so that conjugate symmetry is broken from the start
+    lc0 = jnp.log(jnp.abs(Cs[:, :1]))
+    lci = jnp.log(jnp.abs(Cs[:, 1:]))                         # -inf for zeros
+    rad = jnp.max(jnp.exp((lci - lc0) / jnp.arange(1, n + 1)), axis=1)
+    rad = jnp.where(jnp.isfinite(rad) & (rad > 0), rad, 1.0)
+    ang = 2 * np.pi * np.arange(n) / n + 0.4
+    z0 = (rad[:, None] * jnp.exp(1j * jnp.asarray(ang))[None, :]).astype(cdt)
 
-    def solve_one(k):
-        try:
-            r = roots_reduced(C[k])
-        except np.linalg.LinAlgError:
-            return 1.0
-        return select(r[None, :])[0] if r.size else 1.0
+    eye = jnp.eye(n, dtype=bool)[None]
 
-    if np.any(full):
-        c = C[full]
-        A = np.zeros((c.shape[0], deg, deg))
-        A[:, 0, :] = -c[:, 1:] / c[:, :1]
-        A[:, np.arange(1, deg), np.arange(deg - 1)] = 1.0
-        try:
-            beta[full] = select(np.linalg.eigvals(A))
-        except np.linalg.LinAlgError:        # never let one level stop the run
-            for k in np.flatnonzero(full):
-                beta[k] = solve_one(k)
-    for k in np.flatnonzero(finite & ~full):
-        beta[k] = solve_one(k)
-    return beta
+    def body(_, z):
+        w = _PolyRatio(Cs, z)
+        d = z[:, :, None] - z[:, None, :]
+        S = jnp.sum(jnp.where(eye, 0.0, 1.0 / jnp.where(eye, 1.0, d)), axis=2)
+        zn = z - w / (1.0 - w * S)
+        return jnp.where(jnp.isfinite(zn), zn, z)
+
+    z = jax.lax.fori_loop(0, n_iter, body, z0)
+    return z, ok
 
 
+@jax.jit
 def MaxRealRootBeta(C):
     """
     Scale-dependence parameter beta(z) from the fifth-order LASDD polynomials,
@@ -190,11 +223,11 @@ def MaxRealRootBeta(C):
     the largest real root, and beta = 1 (scale invariance) if that root is not
     in (0, 5) or the polynomial is degenerate.
 
-    The roots are computed on the host in float64 from the companion-matrix
-    eigenvalues (jax.pure_callback), also in single-precision runs. In float32
-    on the device, clustered real roots can merge into complex pairs and
-    deflation errors accumulate; JAX offers no eigenvalue solver on GPU. One
-    call per dynamic-SGS evaluation with nz x 6 coefficients (2026-11-19).
+    Roots: PolyRootsAberth, on the device in the working precision (2026-11-19;
+    a host float64 callback stalled the GPU stream twice per step, up to 9x
+    slower). A root counts as real if |Im z| <= sqrt(eps) |z|. In single
+    precision, tightly clustered real roots may resolve as a complex pair; the
+    float32 coefficients themselves are uncertain at that level.
 
     Parameters:
     -----------
@@ -205,9 +238,12 @@ def MaxRealRootBeta(C):
     --------
     beta : ndarray of shape (nz,)
     """
-    out = jax.ShapeDtypeStruct((C.shape[0],), C.dtype)
-    return jax.pure_callback(
-        lambda c: _MaxRealRootBetaHost(c).astype(c.dtype), out, C)
+    z, ok = PolyRootsAberth(C)
+    tol = jnp.sqrt(jnp.finfo(C.dtype).eps)
+    real = jnp.abs(z.imag) <= tol * jnp.abs(z)      # relative, also near 0
+    bmax = jnp.max(jnp.where(real, z.real, 0.0), axis=1)
+    valid = ok & jnp.isfinite(bmax) & (bmax > 0.0) & (bmax < 5.0)
+    return jnp.where(valid, bmax, 1.0).astype(C.dtype)
 
 
 # ============================================================

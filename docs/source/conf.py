@@ -20,7 +20,7 @@ os.environ.setdefault('JAX_PLATFORMS', 'cpu')
 project = 'JAX-ALFA'
 copyright = '2025–2026, Sukanta Basu'
 author = 'Sukanta Basu'
-release = '0.0.1'
+release = '0.0.2'
 
 # General configuration
 extensions = [

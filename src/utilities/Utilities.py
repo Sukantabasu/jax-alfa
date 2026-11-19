@@ -120,273 +120,67 @@ def Imfilter(x):
 # Scale-dependence parameter from the LASDD polynomial
 # ============================================================
 
-def _TwoSum(a, b):
-    """Error-free sum: a + b = s + e exactly (Knuth)."""
-    s = a + b
-    bb = s - a
-    return s, (a - (s - bb)) + (b - bb)
-
-
-def _TwoProd(a, b):
-    """Error-free product: a * b = p + e exactly (Dekker splitting, no FMA needed)."""
-    f = 134217729.0 if a.dtype == jnp.float64 else 4097.0
-
-    def split(x):
-        c = f * x
-        h = c - (c - x)
-        return h, x - h
-
-    p = a * b
-    ah, al = split(a)
-    bh, bl = split(b)
-    return p, ((ah * bh - p) + ah * bl + al * bh) + al * bl
-
-
-def _CompHorner(Cs, x):
+def PolyRootsAberth(C, n_iter=60, max_radius=1e4):
     """
-    Compensated Horner evaluation (Graillat et al. 2005) of the real polynomials
-    Cs (nz, n+1; descending) at real points x (nz, m): as accurate as Horner in
-    twice the working precision, so sign tests near clustered roots are reliable
-    in single precision.
-    """
-    n = Cs.shape[1] - 1
-    c = Cs[:, None, :]
-    s = jnp.broadcast_to(c[..., 0], x.shape)
-    comp = jnp.zeros_like(x)
-    for i in range(1, n + 1):
-        p, pe = _TwoProd(s, x)
-        s, se = _TwoSum(p, c[..., i])
-        comp = comp * x + (pe + se)
-    return s + comp
-
-
-def _TwoProdC(ar, ai, br, bi):
-    """Error-free complex product (Graillat & Menissier-Morain 2012):
-    (ar + i ai)(br + i bi) = (pr + i pi) + (er + i ei) exactly."""
-    p1, e1 = _TwoProd(ar, br)
-    p2, e2 = _TwoProd(ai, bi)
-    p3, e3 = _TwoProd(ar, bi)
-    p4, e4 = _TwoProd(ai, br)
-    pr, f1 = _TwoSum(p1, -p2)
-    pi_, f2 = _TwoSum(p3, p4)
-    return pr, pi_, (e1 - e2) + f1, (e3 + e4) + f2
-
-
-def _CompHornerC(c, zr, zi):
-    """
-    Compensated Horner evaluation of the real polynomial c (list of arrays,
-    descending, broadcastable) and of its derivative at complex points
-    zr + i zi. Both P and P' are carried as double-word values (error-free
-    transformations), so each is about as accurate as Horner in twice the
-    working precision; this matters for P' near clustered roots, where it is a
-    cancellation of large terms.
-    Returns (Pr, Pi, dPr, dPi).
-    """
-    n = len(c) - 1
-    sr = jnp.broadcast_to(c[0], zr.shape)        # P, high part
-    si = jnp.zeros_like(zr)
-    cr = jnp.zeros_like(zr)                      # P, low part
-    ci = jnp.zeros_like(zr)
-    dr = jnp.zeros_like(zr)                      # P', high part
-    di = jnp.zeros_like(zr)
-    lr = jnp.zeros_like(zr)                      # P', low part
-    li = jnp.zeros_like(zr)
-    for k in range(1, n + 1):
-        # P' <- P' z + P   (uses P before its update)
-        qr, qi, er, ei = _TwoProdC(dr, di, zr, zi)
-        tr, fr = _TwoSum(qr, sr)
-        ti, fi = _TwoSum(qi, si)
-        lr, li = (lr * zr - li * zi) + (er + fr + cr), (lr * zi + li * zr) + (ei + fi + ci)
-        dr, di = tr, ti
-        # P <- P z + c_k
-        pr, pi_, er, ei = _TwoProdC(sr, si, zr, zi)
-        sr, gr = _TwoSum(pr, c[k])
-        si = pi_
-        cr, ci = (cr * zr - ci * zi) + (er + gr), (cr * zi + ci * zr) + ei
-    return sr + cr, si + ci, dr + lr, di + li
-
-
-def _PolyRatio(Cs, z):
-    """
-    Newton correction P(z)/P'(z) (and the backward-error bound) of the
-    polynomials with descending coefficients Cs (nz, n+1) at the points z
-    (nz, n), with compensated Horner. For |z| > 1 the reversed polynomial
-    R(y) = y^n P(1/y) is used, P/P' = z R / (n R - y R'), so that large roots
-    never overflow.
-
-    Returns:
-    --------
-    w : complex ndarray (nz, n)
-    absP : ndarray (nz, n)
-        |P(z)| (or |R(1/z)| for |z| > 1)
-    bound : ndarray (nz, n)
-        sum_i |c_i| |z|^(n-i) (or the reversed analogue)
-    """
-    n = Cs.shape[1] - 1
-    az = jnp.abs(z)
-    inside = az <= 1.0
-    y = 1.0 / jnp.where(z == 0, 1.0, z)
-    u = jnp.where(inside, z, y)
-    ur, ui = u.real, u.imag
-    cols = [Cs[:, None, i] for i in range(n + 1)]
-    fwd = cols
-    rev = cols[::-1]
-    c = [jnp.where(inside, f, r) for f, r in zip(fwd, rev)]
-    Pr, Pi, dPr, dPi = _CompHornerC(c, ur, ui)
-    P = Pr + 1j * Pi
-    dP = dPr + 1j * dPi
-    w_in = P / dP
-    w_out = z * P / (n * P - u * dP)
-    w = jnp.where(inside, w_in, w_out)
-    au = jnp.abs(u)
-    bound = jnp.zeros_like(au)
-    for ck in c:
-        bound = bound * au + jnp.abs(ck)
-    return w, jnp.abs(P), bound
-
-
-def _NewtonPolygonRadii(Cs):
-    """
-    Starting radii for the n roots of each row of Cs (nz, n+1; descending,
-    Cs[:, 0] != 0) from the upper convex hull of (j, log|a_j|), a_j the
-    coefficient of z^j (Bini 1996): a hull segment from j1 to j2 holds j2 - j1
-    roots of modulus about (|a_j1| / |a_j2|)^(1/(j2 - j1)). Roots at 0 (zero
-    trailing coefficients) start at a small radius.
-    """
-    n = Cs.shape[1] - 1
-    A = Cs[:, ::-1]                                   # A[:, j] multiplies z^j
-    fin = A != 0
-    L = jnp.log(jnp.where(fin, jnp.abs(A), 1.0))
-    hull = []
-    for jj in range(n + 1):
-        on = fin[:, jj]
-        for ii in range(jj):
-            for kk in range(jj + 1, n + 1):
-                pair = fin[:, ii] & fin[:, kk]
-                line = L[:, ii] + (L[:, kk] - L[:, ii]) * (jj - ii) / (kk - ii)
-                on = on & ~(pair & (L[:, jj] < line - 1e-6 * (1.0 + jnp.abs(line))))
-        hull.append(on)
-    hull = jnp.stack(hull, axis=1)                    # (nz, n+1)
-    jidx = jnp.arange(n + 1)
-    rad = []
-    for s_ in range(1, n + 1):
-        prev = jnp.max(jnp.where(hull & (jidx <= s_ - 1), jidx, -1), axis=1)
-        nxt = jnp.min(jnp.where(hull & (jidx >= s_), jidx, n + 1), axis=1)
-        Lp = jnp.take_along_axis(L, jnp.clip(prev, 0, n)[:, None], axis=1)[:, 0]
-        Ln = jnp.take_along_axis(L, jnp.clip(nxt, 0, n)[:, None], axis=1)[:, 0]
-        r = jnp.exp((Lp - Ln) / jnp.maximum(nxt - prev, 1))
-        rad.append(jnp.where(prev >= 0, r, jnp.nan))  # nan: root at 0
-    rad = jnp.stack(rad, axis=1)
-    rmin = jnp.nanmin(jnp.where(jnp.isfinite(rad) & (rad > 0), rad, jnp.nan), axis=1)
-    rmin = jnp.where(jnp.isfinite(rmin), rmin, 1.0)
-    return jnp.where(jnp.isfinite(rad) & (rad > 0), rad, 1e-3 * rmin[:, None])
-
-
-def PolyRootsAberth(C, n_iter=45):
-    """
-    All roots of real polynomials, one per row of C (nz, n+1; descending order),
-    by the Aberth-Ehrlich simultaneous iteration, in the working precision on the
-    device (vectorized over rows; no deflation, no host callback).
-
-    - Degree reduction with the rule of polyroots.m (original MATLAB code): while
-      some |c_i/c_0| exceeds the single-precision range, the polynomial restarts
-      at the first such c_i. The removed roots are effectively at infinity; the
-      shift leaves roots at 0, which do not affect the beta selection rule.
-    - Starting points on Newton-polygon radii (_NewtonPolygonRadii), rotated
-      off the real axis.
-    - P and P' by compensated Horner (error-free transformations, about twice
-      the working precision), so that clustered roots of float32 coefficients
-      are resolved as in float64.
-    - Iterates until, for every root, the Newton correction is at round-off
-      (64 eps |z|) or |P(z)| <= 1024 eps^2 sum_i |c_i||z|^(n-i); rows are
-      frozen once converged; fixed n_iter iterations (no host sync). Rows not
-      converged are flagged (ok = False). Known roots at 0 (trailing zero
-      coefficients) are set exactly.
+    All roots of real polynomials, one per row of C (nz, n+1; descending
+    order), by the Aberth-Ehrlich simultaneous iteration in the working
+    precision on the device (vectorized over rows; no deflation, no host
+    callback, fixed iteration count).
 
     Returns:
     --------
     z : complex ndarray (nz, n)
         Roots.
-    Cs : ndarray (nz, n+1)
-        Normalized, degree-reduced coefficients whose roots are z.
     ok : bool ndarray (nz,)
-        False for rows that are non-finite, all zero, of degree 0, or not
-        converged within n_iter iterations.
+        False if the row is non-finite or zero, has a root bound above
+        max_radius (a huge root), or has not converged (backward error
+        |P(z)| > 64 n eps sum_i |c_i||z|^(n-i) for some root).
     """
     nlev, ncoef = C.shape
     n = ncoef - 1
-    cdt = jnp.complex128 if C.dtype == jnp.float64 else jnp.complex64
     eps = jnp.finfo(C.dtype).eps
+    cdt = jnp.complex128 if C.dtype == jnp.float64 else jnp.complex64
 
-    finite = jnp.all(jnp.isfinite(C), axis=1)
-    Cn = jnp.where(finite[:, None], C, 0.0)
-    cmax = jnp.max(jnp.abs(Cn), axis=1)
-    # scale by a power of two (exact: dividing by cmax itself would round every
-    # coefficient and move clustered roots by ~sqrt(eps) in single precision)
-    _, ex = jnp.frexp(jnp.where(cmax > 0, cmax, 1.0))
-    Cn = jnp.ldexp(Cn, -ex[:, None])                         # roots unchanged
-    cmax = jnp.where(cmax > 0, 1.0, 0.0)
+    # root bound max_i |c_i/c_0|^(1/i); rows without a usable bound are skipped
+    finite = jnp.all(jnp.isfinite(C), axis=1) & (C[:, 0] != 0)
+    c0 = jnp.where(finite, C[:, 0], 1.0)
+    Cm = jnp.where(finite[:, None], C / c0[:, None], 0.0)      # monic
+    rad = jnp.max(jnp.abs(Cm[:, 1:]) ** (1.0 / jnp.arange(1, n + 1)), axis=1)
+    ok = finite & jnp.isfinite(rad) & (rad <= max_radius)
+    rad = jnp.where(ok & (rad > 0), rad, 1.0)
+    Cm = jnp.where(ok[:, None], Cm, jnp.zeros(ncoef).at[0].set(1.0).at[n].set(-1.0))
 
-    # degree reduction (polyroots.m rule)
-    BIG = float(np.finfo(np.float32).max)
-    idx = jnp.arange(ncoef)
-    s = jnp.zeros(nlev, dtype=jnp.int32)
-    for _ in range(n):
-        lead = jnp.abs(jnp.take_along_axis(Cn, s[:, None], axis=1))
-        off = (idx[None, :] > s[:, None]) & (jnp.abs(Cn) > BIG * lead)
-        s = jnp.where(jnp.any(off, axis=1), jnp.argmax(off, axis=1), s)
-    valid = finite & (cmax > 0) & (s < n)
-    jj = idx[None, :] + s[:, None]
-    Cs = jnp.where(jj <= n, jnp.take_along_axis(Cn, jnp.clip(jj, 0, n), axis=1), 0.0)
-    benign = jnp.zeros(ncoef, Cn.dtype).at[0].set(1.0).at[n].set(-1.0)   # x^n - 1
-    Cs = jnp.where(valid[:, None], Cs, benign[None, :])
-
-    rad = _NewtonPolygonRadii(Cs)
+    # start on a circle rotated off the real axis
     ang = 2 * np.pi * np.arange(n) / n + 0.4
-    z0 = (rad * jnp.exp(1j * jnp.asarray(ang))[None, :]).astype(cdt)
-
+    z0 = (rad[:, None] * jnp.exp(1j * jnp.asarray(ang))[None, :]).astype(cdt)
     eye = jnp.eye(n, dtype=bool)[None]
+    c = Cm.astype(cdt)[:, None, :]
 
-    # m trailing zero coefficients = m roots exactly at 0 (shift of the degree
-    # reduction, or zero constant terms). They converge only linearly, so the
-    # m smallest iterates are set to 0 and excused from the convergence test.
-    m = jnp.sum(jnp.cumprod((Cs[:, ::-1] == 0).astype(jnp.int32), axis=1), axis=1)
-    jn = jnp.arange(n)
+    def horner(z):
+        p = jnp.broadcast_to(c[..., 0], z.shape)
+        dp = jnp.zeros_like(z)
+        for k in range(1, n + 1):
+            dp = dp * z + p
+            p = p * z + c[..., k]
+        return p, dp
 
-    def zero_slots(z):
-        a = jnp.abs(z)
-        smaller = (a[:, None, :] < a[:, :, None]) | (
-            (a[:, None, :] == a[:, :, None]) & (jn[None, None, :] < jn[None, :, None]))
-        return jnp.sum(smaller, axis=2) < m[:, None]
-
-    def aberth(z, w, frozen):
+    def body(_, z):
+        p, dp = horner(z)
+        w = p / dp
         d = z[:, :, None] - z[:, None, :]
         S = jnp.sum(jnp.where(eye, 0.0, 1.0 / jnp.where(eye, 1.0, d)), axis=2)
         zn = z - w / (1.0 - w * S)
-        return jnp.where(jnp.isfinite(zn) & ~frozen, zn, z)
+        return jnp.where(jnp.isfinite(zn), zn, z)
 
-    def comp(_, state):
-        z, done = state
-        w, aP, bnd = _PolyRatio(Cs, z)
-        # converged: Newton correction or |P| at the attainable round-off level
-        # (a working-precision iterate cannot get closer than a few ulps)
-        conv = ((jnp.abs(w) <= 64 * eps * jnp.abs(z)) | (aP <= 1024 * eps * eps * bnd)
-                | ~jnp.isfinite(w) | zero_slots(z))
-        done = done | jnp.all(conv, axis=1)
-        return aberth(z, w, done[:, None]), done
+    z = jax.lax.fori_loop(0, n_iter, body, z0)
 
-    # fixed trip count: a while_loop would copy its predicate to the host every
-    # iteration on GPUs (a stream sync). Compensated Horner from the start:
-    # plain-Horner iterations park clustered roots in float32 noise. All 9000
-    # test polynomials (and edge cases) converge within 45 in both precisions.
-    z, done = jax.lax.fori_loop(0, n_iter, comp, (z0, ~valid))
-    # rows not frozen (e.g. exact multiple roots, which converge linearly) are
-    # accepted if every root is backward stable at working precision, the
-    # guarantee of numpy.roots / MATLAB roots: |P(z)| <= 64 eps sum|c_i||z|^(n-i)
-    _, aP, bnd = _PolyRatio(Cs, z)
-    stable = jnp.all((aP <= 64 * eps * bnd) | zero_slots(z), axis=1)
-    z = jnp.where(zero_slots(z), 0.0, z)
-    return z, Cs, valid & (done | stable)
+    p, _ = horner(z)
+    az = jnp.abs(z)
+    bnd = jnp.zeros_like(az)
+    for k in range(n + 1):
+        bnd = bnd * az + jnp.abs(Cm[:, None, k])
+    ok = ok & jnp.all(jnp.abs(p) <= 64 * n * eps * bnd, axis=1)
+    return z, ok
 
 
 @jax.jit
@@ -394,22 +188,16 @@ def MaxRealRootBeta(C):
     """
     Scale-dependence parameter beta(z) from the fifth-order LASDD polynomials,
     one per vertical level, with the selection rule of the original MATLAB
-    code (MLp_LocSMAG.m, MLp_LocScSMAG.m): complex roots count as 0, beta is
-    the largest real root, and beta = 1 (scale invariance) if that root is not
-    in (0, 5) or the polynomial is degenerate.
+    code (MLp_LocSMAG.m, MLp_LocScSMAG.m): beta is the largest real root
+    (complex roots count as 0), and beta = 1 (scale invariance) if that root
+    is not in (0, 5).
 
-    Roots: PolyRootsAberth, on the device in the working precision (2026-11-19;
-    a host float64 callback stalled the GPU stream twice per step, up to 9x
-    slower). Real or complex is decided without a tolerance on Im z:
-      - |Im z| <= 64 eps |z|: real;   |Im z| > 0.05 |z|: complex;
-      - in between, the sign of P on the real axis at Re z + |Im z| *
-        {-4, -2, -1, 0, 1, 2, 4} (compensated Horner, about twice the working
-        precision): a sign change means real roots there (the largest is
-        located by bisection). Without one, the critical point x* of P in that
-        interval (bisection on P') decides: P(x*) = 0 to compensated round-off
-        (<= 1024 eps^2 sum|c_i||x*|^(n-i)) means a real multiple root, otherwise
-        a complex pair.
-    Unconverged rows (none seen in tests) also give beta = 1.
+    Simple and conservative (owner's choice, 2026-11-19): beta = 1 also when
+    the roots are not computed reliably -- no convergence, a huge root, any
+    root that is neither clearly real (|Im z| <= 1000 eps |z|) nor clearly
+    complex (|Im z| > 0.01 |z|), or (single precision only) two roots closer
+    than 5% of their size, where float32 can split or merge them. In tests,
+    LES polynomials had well-separated roots (min relative distance 0.1).
 
     Parameters:
     -----------
@@ -420,72 +208,19 @@ def MaxRealRootBeta(C):
     --------
     beta : ndarray of shape (nz,)
     """
-    z, Cs, ok = PolyRootsAberth(C)
+    z, ok = PolyRootsAberth(C)
     eps = jnp.finfo(C.dtype).eps
-    x = z.real
-    h = jnp.abs(z.imag)
-    az = jnp.abs(z)
-    strict = h <= 64 * eps * az
-    amb = ~strict & (h <= 0.05 * az) & (az <= 1e6)
-
-    # sign test on the real axis around ambiguous roots
-    k = jnp.asarray([-4.0, -2.0, -1.0, 0.0, 1.0, 2.0, 4.0], dtype=C.dtype)
-    hs = jnp.where(amb, jnp.maximum(h, 64 * eps * az), 0.0)
-    pts = x[..., None] + hs[..., None] * k                    # (nz, n, 7)
-    nlev, n = z.shape
-    v = _CompHorner(Cs, pts.reshape(nlev, -1)).reshape(pts.shape)
-    sg = jnp.where(v >= 0, 1.0, -1.0)
-    chg = sg[..., 1:] != sg[..., :-1]                         # (nz, n, 6)
-    real_amb = amb & jnp.any(chg, axis=-1)
-    last = (chg.shape[-1] - 1) - jnp.argmax(chg[..., ::-1], axis=-1)
-    lo = jnp.take_along_axis(pts, last[..., None], axis=-1)[..., 0]
-    hi = jnp.take_along_axis(pts, last[..., None] + 1, axis=-1)[..., 0]
-    slo = jnp.take_along_axis(sg, last[..., None], axis=-1)[..., 0]
-
-    def bisect(_, lh):
-        lo, hi = lh
-        mid = 0.5 * (lo + hi)
-        sm = jnp.where(_CompHorner(Cs, mid) >= 0, 1.0, -1.0)
-        same = sm == slo
-        return jnp.where(same, mid, lo), jnp.where(same, hi, mid)
-
-    lo, hi = jax.lax.fori_loop(0, 60, bisect, (lo, hi))
-    xr = jnp.where(real_amb, 0.5 * (lo + hi), x)
-
-    # touching test: even-multiplicity real roots give no sign change
-    cols = [Cs[:, None, i] for i in range(n + 1)]
-
-    def PdP(xx):
-        Pr, _, dPr, _ = _CompHornerC(cols, xx, jnp.zeros_like(xx))
-        ax = jnp.abs(xx)
-        bnd = jnp.zeros_like(ax)
-        for ck in cols:
-            bnd = bnd * ax + jnp.abs(ck)
-        return Pr, dPr, bnd
-
-    tlo = x - 4 * hs
-    thi = x + 4 * hs
-    _, dlo, _ = PdP(tlo)
-    _, dhi, _ = PdP(thi)
-    crit = amb & ~real_amb & ((dlo >= 0) != (dhi >= 0))
-    sdlo = jnp.where(dlo >= 0, 1.0, -1.0)
-
-    def bisect_d(_, lh):
-        lo, hi = lh
-        mid = 0.5 * (lo + hi)
-        _, dm, _ = PdP(mid)
-        same = jnp.where(dm >= 0, 1.0, -1.0) == sdlo
-        return jnp.where(same, mid, lo), jnp.where(same, hi, mid)
-
-    tlo, thi = jax.lax.fori_loop(0, 60, bisect_d, (tlo, thi))
-    xs = 0.5 * (tlo + thi)
-    Ps, _, bs = PdP(xs)
-    touch = crit & (jnp.abs(Ps) <= 1024 * eps * eps * bs)
-    xr = jnp.where(touch, xs, xr)
-
-    real = strict | real_amb | touch
-    bmax = jnp.max(jnp.where(real, xr, 0.0), axis=1)
-    valid = ok & jnp.isfinite(bmax) & (bmax > 0.0) & (bmax < 5.0)
+    rel = jnp.abs(z.imag) / jnp.maximum(jnp.abs(z), jnp.finfo(C.dtype).tiny)
+    real = rel <= 1000 * eps
+    doubtful = jnp.any(~real & (rel <= 0.01), axis=1)
+    if C.dtype == jnp.float32:
+        n = z.shape[1]
+        dist = jnp.abs(z[:, :, None] - z[:, None, :])
+        size = jnp.maximum(jnp.abs(z[:, :, None]), jnp.abs(z[:, None, :]))
+        close = (dist <= 0.05 * size) & ~jnp.eye(n, dtype=bool)[None]
+        doubtful = doubtful | jnp.any(close, axis=(1, 2))
+    bmax = jnp.max(jnp.where(real, z.real, 0.0), axis=1)
+    valid = ok & ~doubtful & (bmax > 0.0) & (bmax < 5.0)
     return jnp.where(valid, bmax, 1.0).astype(C.dtype)
 
 

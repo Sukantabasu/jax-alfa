@@ -192,12 +192,11 @@ def MaxRealRootBeta(C):
     (complex roots count as 0), and beta = 1 (scale invariance) if that root
     is not in (0, 5).
 
-    Simple and conservative (owner's choice, 2026-11-19): beta = 1 also when
-    the roots are not computed reliably -- no convergence, a huge root, any
-    root that is neither clearly real (|Im z| <= 1000 eps |z|) nor clearly
-    complex (|Im z| > 0.01 |z|), or (single precision only) lies within 5% of
-    another root -- but only if that doubtful root could be the largest real
-    root (Re z >= beta - 0.05 |z|); doubtful roots below it do not matter.
+    Owner's choice (2026-11-19): simple. Nearly real roots (|Im z| <= 0.01 |z|)
+    count as real, so for multiple or clustered roots (which round-off can
+    turn into close complex pairs) the largest of them is taken. beta = 1 also
+    when the roots are not computed reliably (non-finite input, a huge root,
+    no convergence).
 
     Parameters:
     -----------
@@ -209,20 +208,10 @@ def MaxRealRootBeta(C):
     beta : ndarray of shape (nz,)
     """
     z, ok = PolyRootsAberth(C)
-    eps = jnp.finfo(C.dtype).eps
     rel = jnp.abs(z.imag) / jnp.maximum(jnp.abs(z), jnp.finfo(C.dtype).tiny)
-    real = rel <= 1000 * eps
-    risky = ~real & (rel <= 0.01)              # neither clearly real nor complex
-    if C.dtype == jnp.float32:                 # float32 can split/merge close roots
-        n = z.shape[1]
-        dist = jnp.abs(z[:, :, None] - z[:, None, :])
-        size = jnp.maximum(jnp.abs(z[:, :, None]), jnp.abs(z[:, None, :]))
-        close = (dist <= 0.05 * size) & ~jnp.eye(n, dtype=bool)[None]
-        risky = risky | jnp.any(close, axis=2)
+    real = rel <= 0.01                 # real, or a member of a root cluster
     bmax = jnp.max(jnp.where(real, z.real, 0.0), axis=1)
-    # only doubtful roots that could be (or exceed) the largest real root matter
-    doubtful = jnp.any(risky & (z.real >= bmax[:, None] - 0.05 * jnp.abs(z)), axis=1)
-    valid = ok & ~doubtful & (bmax > 0.0) & (bmax < 5.0)
+    valid = ok & (bmax > 0.0) & (bmax < 5.0)
     return jnp.where(valid, bmax, 1.0).astype(C.dtype)
 
 

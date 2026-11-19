@@ -195,9 +195,9 @@ def MaxRealRootBeta(C):
     Simple and conservative (owner's choice, 2026-11-19): beta = 1 also when
     the roots are not computed reliably -- no convergence, a huge root, any
     root that is neither clearly real (|Im z| <= 1000 eps |z|) nor clearly
-    complex (|Im z| > 0.01 |z|), or (single precision only) two roots closer
-    than 5% of their size, where float32 can split or merge them. In tests,
-    LES polynomials had well-separated roots (min relative distance 0.1).
+    complex (|Im z| > 0.01 |z|), or (single precision only) lies within 5% of
+    another root -- but only if that doubtful root could be the largest real
+    root (Re z >= beta - 0.05 |z|); doubtful roots below it do not matter.
 
     Parameters:
     -----------
@@ -212,14 +212,16 @@ def MaxRealRootBeta(C):
     eps = jnp.finfo(C.dtype).eps
     rel = jnp.abs(z.imag) / jnp.maximum(jnp.abs(z), jnp.finfo(C.dtype).tiny)
     real = rel <= 1000 * eps
-    doubtful = jnp.any(~real & (rel <= 0.01), axis=1)
-    if C.dtype == jnp.float32:
+    risky = ~real & (rel <= 0.01)              # neither clearly real nor complex
+    if C.dtype == jnp.float32:                 # float32 can split/merge close roots
         n = z.shape[1]
         dist = jnp.abs(z[:, :, None] - z[:, None, :])
         size = jnp.maximum(jnp.abs(z[:, :, None]), jnp.abs(z[:, None, :]))
         close = (dist <= 0.05 * size) & ~jnp.eye(n, dtype=bool)[None]
-        doubtful = doubtful | jnp.any(close, axis=(1, 2))
+        risky = risky | jnp.any(close, axis=2)
     bmax = jnp.max(jnp.where(real, z.real, 0.0), axis=1)
+    # only doubtful roots that could be (or exceed) the largest real root matter
+    doubtful = jnp.any(risky & (z.real >= bmax[:, None] - 0.05 * jnp.abs(z)), axis=1)
     valid = ok & ~doubtful & (bmax > 0.0) & (bmax < 5.0)
     return jnp.where(valid, bmax, 1.0).astype(C.dtype)
 

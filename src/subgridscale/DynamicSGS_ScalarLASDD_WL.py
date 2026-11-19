@@ -45,7 +45,7 @@ from ..operations.Filtering import Filtering_Level1, Filtering_Level2
 
 # Import helper functions
 from ..utilities.Utilities import PlanarMean, StagGridAvg
-from ..utilities.Utilities import Roots, Imfilter
+from ..utilities.Utilities import Imfilter
 
 
 # ============================================================
@@ -53,42 +53,44 @@ from ..utilities.Utilities import Roots, Imfilter
 # ============================================================
 
 @jax.jit
-def ComputeBeta2(ff, ee, dd, cc, bb, aa):
+def ComputeBeta2(a1, a3, a6, a8):
     """
-    Solves the polynomial:
-    ff*x^5 + ee*x^4 + dd*x^3 + cc*x^2 + bb*x + aa = 0
-    for each vertical level to find the scalar scale-dependence
-    parameter beta2 used in the LASDD-WL scalar model.
+    Scale-dependence parameter of the LASDD-WL scalar model, from the
+    closed-form physical root of the ABL07 fifth-order polynomial.
+
+    With x = α^(4/3)·β_θ, the polynomial of ABL07 Eq. A8/A10 factors exactly as
+        P = a6·a8·(1 - x)^3·(1 + x)·[a1·a3/(a6·a8) - 1 - x],
+    because the WL base model is linear in the strain (gradient). The triple
+    root x = 1 makes M_ij (T_dn) vanish identically and x = -1 is negative, so
+    the only physical root is
+        β_θ = α^(-4/3)·(a1·a3/(a6·a8) - 1).
+    Solving this directly avoids selecting the degenerate root (which the
+    largest-root rule did whenever β_θ < α^(-4/3)) and the absolute-tolerance
+    convergence test of the iterative solver.
 
     Parameters:
     -----------
-    ff, ee, dd, cc, bb, aa : ndarray
-        1D arrays of polynomial coefficients at each vertical level
+    a1, a3, a6, a8 : ndarray
+        1D arrays of the plane-averaged coefficients at each vertical level
 
     Returns:
     --------
-    beta2 : ndarray
-        1D array of the maximum valid real root for each vertical level
+    beta : ndarray
+        1D array of β_θ at each level; 1.0 (scale invariance) where the root is
+        not finite, outside (0, 5), or so close to α^(-4/3) that |1 - α^(4/3)·beta|
+        is at round-off level (≤ √ε of the working precision). Near-singular but
+        resolvable roots are kept; very large coefficients are handled downstream
+        by the existing denominator and clipping guards.
     """
-
-    def find_roots_for_level(k):
-        coeffs = jnp.array([ff[k], ee[k], dd[k], cc[k], bb[k], aa[k]])
-        guesses = jnp.array([0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.5])
-        roots = jax.vmap(lambda guess:
-                         Roots(coeffs, init_guess=guess))(guesses)
-
-        valid_roots = jnp.where(
-            (jnp.abs(jnp.imag(roots)) < 1e-6) &
-            (jnp.real(roots) > 0) &
-            (jnp.real(roots) < 5.0),
-            jnp.real(roots),
-            jnp.nan
-        )
-
-        max_root = jnp.nanmax(valid_roots)
-        return jnp.where(jnp.isnan(max_root), 1.0, max_root)
-
-    return jax.vmap(find_roots_for_level)(jnp.arange(ff.shape[0]))
+    # Exclude only the round-off-level singularity |1 - α^(4/3)·beta| ≈ 0 (M_ij = 0),
+    # using √ε of the working precision (≈3.5e-4 float32, ≈1.5e-8 float64).
+    BETA_DEG_TOL = jnp.sqrt(jnp.finfo(a1.dtype).eps)
+    a68 = a6 * a8
+    ratio = a1 * a3 / jnp.where(a68 == 0, jnp.nan, a68)
+    beta = TFR ** (-4 / 3) * (ratio - 1)
+    valid = (jnp.isfinite(beta) & (beta > 0) & (beta < 5.0) &
+             (jnp.abs(1 - TFR ** (4 / 3) * beta) > BETA_DEG_TOL))
+    return jnp.where(valid, beta, 1.0)
 
 
 # ============================================================
@@ -199,8 +201,8 @@ def ScalarLASDD(
     dTHdy_hatd = Filtering_Level2(FFT(dTHdy))
     dTHdz_hatd = Filtering_Level2(FFT(THz))
 
-    # Scalar Leonard fluxes:
-    #   K'_i = LTH (Level 1), K_i = QTH (Level 2)
+    # Scalar Leonard fluxes (ABL07 notation):
+    #   K_i = LTH (Level 1), K'_i = QTH (Level 2)
     LTH11 = uTH_hat  - u_hat  * TH_hat
     LTH12 = vTH_hat  - v_hat  * TH_hat
     LTH13 = wTH_hat  - w_hat  * TH_hat
@@ -212,8 +214,11 @@ def ScalarLASDD(
     # ----------------------------------------------------------
     # WL scalar polynomial coefficients (ABL07 Appendix)
     # Independent scalars: a1, a3, a6, a8
+    # Level-1 flux LTH pairs with Level-1 gradients (dTH*_hat); Level-2 flux
+    # QTH pairs with Level-2 gradients (dTH*_hatd), as in ABL07 Eq. A10 and
+    # the original Fortran (optim_scl_wong.f, 2007).
     # ----------------------------------------------------------
-    a1_terms = (QTH11 * dTHdx_hat + QTH12 * dTHdy_hat + QTH13 * dTHdz_hat)
+    a1_terms = (QTH11 * dTHdx_hatd + QTH12 * dTHdy_hatd + QTH13 * dTHdz_hatd)
     a1 = PlanarMean(a1_terms)
 
     a3_terms = (dTHdx_hat ** 2 + dTHdy_hat ** 2 + dTHdz_hat ** 2)
@@ -225,47 +230,29 @@ def ScalarLASDD(
     a8_terms = (dTHdx_hatd ** 2 + dTHdy_hatd ** 2 + dTHdz_hatd ** 2)
     a8 = PlanarMean(a8_terms)
 
-    # Derived scalars
-    a2  = -(TFR ** (8 / 3)) * a1
-    a4  = -2 * TFR ** (4 / 3) * a3
-    a5  =  TFR ** (8 / 3) * a3
-    a7  = -TFR ** (4 / 3) * a6
-    a9  = -2 * TFR ** (8 / 3) * a8
-    a10 =  TFR ** (16 / 3) * a8
-
-    # Polynomial coefficients A0...A5 mapped to aa...ff
-    aa = a1 * a3 - a6 * a8            # A0
-    bb = a1 * a4 - a7 * a8            # A1
-    cc = a2 * a3 + a1 * a5 - a6 * a9  # A2
-    dd = a2 * a4 - a7 * a9            # A3
-    ee = a2 * a5 - a6 * a10           # A4
-    ff = -a7 * a10                    # A5
+    # The higher-order coefficients of ABL07 (a2, a4, a5, a7, a9, a10) are
+    # multiples of a1, a3, a6 and a8; the fifth-order polynomial they form
+    # factors exactly, and its physical root is computed in closed form.
 
     computeBeta = optSgs in [1, 2]
     if computeBeta:
-        beta2_1D = ComputeBeta2(ff, ee, dd, cc, bb, aa)
+        beta2_1D = ComputeBeta2(a1, a3, a6, a8)
     else:
         beta2_1D = jnp.ones(nz)
     beta2_3D = jnp.broadcast_to(beta2_1D.reshape(1, 1, nz), (nx, ny, nz))
 
     # ----------------------------------------------------------
-    # WL scalar T_up and T_dn for CwlPrRatio
-    # T_up = L^(4/3) * (K'_i * ∂_i c̄  -  α^(4/3)*β2 * K'_i * ∂_i ĉ)
-    # T_dn = L^(8/3) * (|∂_i c̄|² - 2*α^(4/3)*β2*(∂_i c̄·∂_i ĉ) + α^(8/3)*β2²*|∂_i ĉ|²)
+    # WL scalar T_up and T_dn for CwlPrRatio (Level 1 only):
+    #   M_i  = L^(4/3) * (1 - α^(4/3)*β2) * ∂_i c̄
+    #   T_up = K_i M_i  = L^(4/3) * (1 - α^(4/3)*β2)   * K_i ∂_i c̄
+    #   T_dn = M_i M_i  = L^(8/3) * (1 - α^(4/3)*β2)^2 * |∂_i c̄|²
+    # with c̄ the Level-1 filtered scalar (cf. optim_scl_wong.f, 2007).
     # ----------------------------------------------------------
-    b6_terms  = (LTH11 * dTHdx_hatd +
-                 LTH12 * dTHdy_hatd +
-                 LTH13 * dTHdz_hatd)
+    factor = 1 - TFR ** (4 / 3) * beta2_3D
 
-    c36_terms = (dTHdx_hat * dTHdx_hatd +
-                 dTHdy_hat * dTHdy_hatd +
-                 dTHdz_hat * dTHdz_hatd)
+    T_up = L ** (4 / 3) * factor * a6_terms
 
-    T_up = L ** (4 / 3) * (a6_terms - TFR ** (4 / 3) * beta2_3D * b6_terms)
-
-    T_dn = L ** (8 / 3) * (a3_terms
-                            - 2 * TFR ** (4 / 3) * beta2_3D * c36_terms
-                            + TFR ** (8 / 3) * beta2_3D ** 2 * a8_terms)
+    T_dn = L ** (8 / 3) * factor ** 2 * a3_terms
 
     CwlPrRatio_3D = jax.vmap(CwlPrRatio_at_level_k,
                               in_axes=(2, 2), out_axes=2)(T_up, T_dn)

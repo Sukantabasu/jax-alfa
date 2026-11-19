@@ -44,7 +44,7 @@ from ..operations.Filtering import Filtering_Level1, Filtering_Level2
 
 # Import helper functions
 from ..utilities.Utilities import PlanarMean, StagGridAvg
-from ..utilities.Utilities import Roots, Imfilter
+from ..utilities.Utilities import Imfilter
 
 
 # ============================================================
@@ -52,41 +52,44 @@ from ..utilities.Utilities import Roots, Imfilter
 # ============================================================
 
 @jax.jit
-def ComputeBeta1(ff, ee, dd, cc, bb, aa):
+def ComputeBeta1(a1, a3, a6, a8):
     """
-    Solves the polynomial:
-    ff*x^5 + ee*x^4 + dd*x^3 + cc*x^2 + bb*x + aa = 0
-    for each vertical level to find the scale-dependent parameter beta1.
+    Scale-dependence parameter of the LASDD-WL momentum model, from the
+    closed-form physical root of the ABL07 fifth-order polynomial.
+
+    With x = α^(4/3)·β, the polynomial of ABL07 Eq. A8/A10 factors exactly as
+        P = a6·a8·(1 - x)^3·(1 + x)·[a1·a3/(a6·a8) - 1 - x],
+    because the WL base model is linear in the strain (gradient). The triple
+    root x = 1 makes M_ij (T_dn) vanish identically and x = -1 is negative, so
+    the only physical root is
+        β = α^(-4/3)·(a1·a3/(a6·a8) - 1).
+    Solving this directly avoids selecting the degenerate root (which the
+    largest-root rule did whenever β < α^(-4/3)) and the absolute-tolerance
+    convergence test of the iterative solver.
 
     Parameters:
     -----------
-    ff, ee, dd, cc, bb, aa : ndarray
-        1D arrays of polynomial coefficients at each vertical level
+    a1, a3, a6, a8 : ndarray
+        1D arrays of the plane-averaged coefficients at each vertical level
 
     Returns:
     --------
-    beta1 : ndarray
-        1D array of the maximum valid real root for each vertical level
+    beta : ndarray
+        1D array of β at each level; 1.0 (scale invariance) where the root is
+        not finite, outside (0, 5), or so close to α^(-4/3) that |1 - α^(4/3)·beta|
+        is at round-off level (≤ √ε of the working precision). Near-singular but
+        resolvable roots are kept; very large coefficients are handled downstream
+        by the existing denominator and clipping guards.
     """
-
-    def find_roots_for_level(k):
-        coeffs = jnp.array([ff[k], ee[k], dd[k], cc[k], bb[k], aa[k]])
-        guesses = jnp.array([0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.5])
-        roots = jax.vmap(lambda guess:
-                         Roots(coeffs, init_guess=guess))(guesses)
-
-        valid_roots = jnp.where(
-            (jnp.abs(jnp.imag(roots)) < 1e-6) &
-            (jnp.real(roots) > 0) &
-            (jnp.real(roots) < 5.0),
-            jnp.real(roots),
-            jnp.nan
-        )
-
-        max_root = jnp.nanmax(valid_roots)
-        return jnp.where(jnp.isnan(max_root), 1.0, max_root)
-
-    return jax.vmap(find_roots_for_level)(jnp.arange(ff.shape[0]))
+    # Exclude only the round-off-level singularity |1 - α^(4/3)·beta| ≈ 0 (M_ij = 0),
+    # using √ε of the working precision (≈3.5e-4 float32, ≈1.5e-8 float64).
+    BETA_DEG_TOL = jnp.sqrt(jnp.finfo(a1.dtype).eps)
+    a68 = a6 * a8
+    ratio = a1 * a3 / jnp.where(a68 == 0, jnp.nan, a68)
+    beta = TFR ** (-4 / 3) * (ratio - 1)
+    valid = (jnp.isfinite(beta) & (beta > 0) & (beta < 5.0) &
+             (jnp.abs(1 - TFR ** (4 / 3) * beta) > BETA_DEG_TOL))
+    return jnp.where(valid, beta, 1.0)
 
 
 # ============================================================
@@ -241,9 +244,12 @@ def LASDD(
     # ----------------------------------------------------------
     # WL polynomial coefficients (ABL07 Appendix, Eqs. A1-A10)
     # Independent scalars: a1, a3, a6, a8
+    # Level-1 Leonard stress L_ij pairs with Level-1 strain (S_ij_hat);
+    # Level-2 Leonard stress Q_ij pairs with Level-2 strain (S_ij_hatd),
+    # as in ABL07 Eq. A8 and the original Fortran (optim_wong.f, 2007).
     # ----------------------------------------------------------
-    a1_terms = (Q11 * S11_hat + Q22 * S22_hat + Q33 * S33_hat +
-                2 * (Q12 * S12_hat + Q13 * S13_hat + Q23 * S23_hat))
+    a1_terms = (Q11 * S11_hatd + Q22 * S22_hatd + Q33 * S33_hatd +
+                2 * (Q12 * S12_hatd + Q13 * S13_hatd + Q23 * S23_hatd))
     a1 = PlanarMean(a1_terms)
 
     a3_terms = (S11_hat ** 2 + S22_hat ** 2 + S33_hat ** 2 +
@@ -258,40 +264,31 @@ def LASDD(
                 2 * (S12_hatd ** 2 + S13_hatd ** 2 + S23_hatd ** 2))
     a8 = PlanarMean(a8_terms)
 
-    # Derived scalars (all expressible in terms of a1, a3, a6, a8)
-    a2  = -(TFR ** (8 / 3)) * a1
-    a4  = -2 * TFR ** (4 / 3) * a3
-    a5  =  TFR ** (8 / 3) * a3
-    a7  = -TFR ** (4 / 3) * a6
-    a9  = -2 * TFR ** (8 / 3) * a8
-    a10 =  TFR ** (16 / 3) * a8
-
-    # Polynomial coefficients A0...A5 mapped to aa...ff
-    aa = a1 * a3 - a6 * a8            # A0 (constant term)
-    bb = a1 * a4 - a7 * a8            # A1 (beta^1)
-    cc = a2 * a3 + a1 * a5 - a6 * a9  # A2 (beta^2)
-    dd = a2 * a4 - a7 * a9            # A3 (beta^3)
-    ee = a2 * a5 - a6 * a10           # A4 (beta^4)
-    ff = -a7 * a10                    # A5 (beta^5)
+    # The higher-order coefficients of ABL07 (a2, a4, a5, a7, a9, a10) are
+    # multiples of a1, a3, a6 and a8; the fifth-order polynomial they form
+    # factors exactly, and its physical root is computed in closed form.
 
     computeBeta = optSgs in [1, 2]
     if computeBeta:
-        beta1_1D = ComputeBeta1(ff, ee, dd, cc, bb, aa)
+        beta1_1D = ComputeBeta1(a1, a3, a6, a8)
     else:
         beta1_1D = jnp.ones(nz)
     beta1_3D = jnp.broadcast_to(beta1_1D.reshape(1, 1, nz), (nx, ny, nz))
 
     # ----------------------------------------------------------
-    # WL M tensor: M_ij = 2*Δf^(4/3)*(S̄_ij - α^(4/3)*β*Ŝ_ij)
+    # WL M tensor (ABL07 Eq. A3): M_ij = 2*Δf^(4/3)*(1 - α^(4/3)*β)*S̄_ij,
+    # with the Level-1 strain S̄_ij (S_ij_hat) in both terms. The WL base
+    # model is linear in S, so the test-filtered SGS stress is
+    # proportional to S̄_ij itself (cf. optim_wong.f, 2007).
     # ----------------------------------------------------------
     T1 = 2 * L ** (4 / 3)
     T2 = 2 * (TFR * L) ** (4 / 3)
-    M11 = T1 * S11_hat - T2 * beta1_3D * S11_hatd
-    M22 = T1 * S22_hat - T2 * beta1_3D * S22_hatd
-    M33 = T1 * S33_hat - T2 * beta1_3D * S33_hatd
-    M12 = T1 * S12_hat - T2 * beta1_3D * S12_hatd
-    M13 = T1 * S13_hat - T2 * beta1_3D * S13_hatd
-    M23 = T1 * S23_hat - T2 * beta1_3D * S23_hatd
+    M11 = T1 * S11_hat - T2 * beta1_3D * S11_hat
+    M22 = T1 * S22_hat - T2 * beta1_3D * S22_hat
+    M33 = T1 * S33_hat - T2 * beta1_3D * S33_hat
+    M12 = T1 * S12_hat - T2 * beta1_3D * S12_hat
+    M13 = T1 * S13_hat - T2 * beta1_3D * S13_hat
+    M23 = T1 * S23_hat - T2 * beta1_3D * S23_hat
 
     # LM = L_ij * M_ij,  MM = M_ij * M_ij
     LM = ((L11 * M11 + L22 * M22 + L33 * M33) +

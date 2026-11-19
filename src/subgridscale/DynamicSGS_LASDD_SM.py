@@ -162,7 +162,9 @@ def LASDD(
     w_ = ZeRo3D.copy()
     w_ = w_.at[:, :, 1:nz - 1].set(StagGridAvg(w[:, :, 1:nz]))
     w_ = w_.at[:, :, 0].set(0.5 * w[:, :, 1])
-    w_ = w_.at[:, :, nz - 1].set(w[:, :, nz - 2])
+    # Top uvp level: w at the lid (= 0), as in OCTLES MLp_Sgs.m (2022).
+    # Diagnostic only: Cs2 at uvp level nz-1 never enters the stresses.
+    w_ = w_.at[:, :, nz - 1].set(w[:, :, nz - 1])
 
     # Compute squared terms
     uu, vv, ww = u_ ** 2, v_ ** 2, w_ ** 2

@@ -100,6 +100,13 @@ def Wavenumber():
     ky2 = ky[None, :, None]  # Reshape for broadcasting
     ky2 = jnp.broadcast_to(ky2, (nx, ny_rfft, nz))
 
+    # Zero the whole Nyquist row and column in both arrays, as in OCTLES
+    # (MLp_Les.m: kr2(:,ny/2+1) = 0; kc2(nx/2+1,:) = 0). Zeroing only the
+    # 1D vectors left mixed-Nyquist modes with a derivative that the
+    # pressure solve (which drops all Nyquist modes) cannot remove.
+    kx2 = kx2.at[:, ny // 2, :].set(0)
+    ky2 = ky2.at[nx // 2, :, :].set(0)
+
     return kx2, ky2
 
 

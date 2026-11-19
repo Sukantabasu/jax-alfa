@@ -116,6 +116,101 @@ def Imfilter(x):
 
 
 # ============================================================
+# All roots of a polynomial (Laguerre with deflation)
+# ============================================================
+
+def _LaguerreIterate(p, x0, n_iter):
+    """
+    Fixed number of Laguerre steps for the polynomial p (descending
+    coefficients, complex) starting from x0. Steps are skipped once the
+    residual is exactly zero. Used by PolyRootsAll.
+    """
+    n = p.shape[0] - 1
+    dp = jnp.polyder(p)
+    d2p = jnp.polyder(dp)
+    ap = jnp.abs(p)
+    eps = jnp.finfo(jnp.real(p).dtype).eps
+
+    def step(_, x):
+        f = jnp.polyval(p, x)
+        df = jnp.polyval(dp, x)
+        d2f = jnp.polyval(d2p, x)
+        # converged: residual at round-off level relative to sum |p_i| |x|^i
+        at_root = jnp.abs(f) <= 4 * eps * jnp.polyval(ap, jnp.abs(x))
+        f_nz = jnp.where(at_root, 1.0 + 0j, f)
+        G = df / f_nz
+        H = G ** 2 - d2f / f_nz
+        sq = jnp.sqrt((n - 1) * (n * H - G ** 2))
+        den = jnp.where(jnp.abs(G + sq) >= jnp.abs(G - sq), G + sq, G - sq)
+        den = jnp.where(den == 0, 1.0 + 0j, den)
+        dx = n / den
+        ok = (~at_root) & jnp.isfinite(jnp.real(dx)) & jnp.isfinite(jnp.imag(dx))
+        return jnp.where(ok, x - dx, x)
+
+    return jax.lax.fori_loop(0, n_iter, step, x0)
+
+
+def PolyRootsAll(coeffs, n_iter=60, n_polish=8):
+    """
+    All roots of a polynomial, by Laguerre's method with deflation.
+
+    Each root is found on the deflated polynomial, polished on the original
+    polynomial, and divided out (synthetic division). Works on GPU (no
+    eigenvalue solver needed) and returns as many roots as the degree,
+    unlike multi-start Laguerre, which can converge to the same root from
+    every start and miss real roots (found in the 2026-11-19 audit).
+
+    Parameters:
+    -----------
+    coeffs : ndarray
+        Coefficients in descending order of degree; the leading coefficient
+        must be non-zero (callers check this).
+
+    Returns:
+    --------
+    roots : complex ndarray of shape (degree,)
+    """
+    cdtype = jnp.complex128 if jax.config.jax_enable_x64 else jnp.complex64
+    c = coeffs.astype(cdtype)
+    scale = jnp.max(jnp.abs(c))
+    c = c / jnp.where(scale > 0, scale, 1.0)
+    p = c
+    roots = []
+    for _ in range(c.shape[0] - 1):
+        if p.shape[0] == 2:
+            r = -p[1] / p[0]
+        else:
+            r = _LaguerreIterate(p, jnp.asarray(0.0 + 0j, dtype=cdtype), n_iter)
+        r = _LaguerreIterate(c, r, n_polish)
+        roots.append(r)
+        # synthetic division by (x - r), remainder discarded
+        q = [p[0]]
+        for a in p[1:-1]:
+            q.append(a + r * q[-1])
+        p = jnp.stack(q)
+    return jnp.stack(roots)
+
+
+def MaxRealRootBeta(coeffs):
+    """
+    Scale-dependence parameter from the fifth-order LASDD polynomial, with the
+    selection rule of the original MATLAB code (MLp_LocSMAG.m, MLp_LocScSMAG.m):
+    complex roots count as 0, beta is the largest real root, and beta = 1
+    (scale invariance) if that root is not in (0, 5) or if the polynomial is
+    degenerate (vanishing leading coefficient).
+    """
+    rdtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
+    eps = jnp.finfo(rdtype).eps
+    lead_ok = jnp.abs(coeffs[0]) > 10 * eps * jnp.max(jnp.abs(coeffs))
+    safe = jnp.where(lead_ok, coeffs, jnp.ones_like(coeffs))
+    roots = PolyRootsAll(safe)
+    is_real = jnp.abs(jnp.imag(roots)) <= jnp.sqrt(eps) * (1 + jnp.abs(roots))
+    bmax = jnp.max(jnp.where(is_real, jnp.real(roots), 0.0))
+    valid = lead_ok & (bmax > 0) & (bmax < 5.0)
+    return jnp.where(valid, bmax, 1.0)
+
+
+# ============================================================
 # Compute roots of a polynomial using Laguerre's method
 # ============================================================
 
@@ -139,8 +234,9 @@ def Roots(coeffs, init_guess=1.0 + 0j, tol=1e-6, max_iter=20):
         For real polynomials, can use real guess, but complex arithmetic
         is used internally to handle complex roots.
     tol : float, optional
-        Convergence tolerance. Iteration stops when:
-        |x_new - x_old| < tol * (1 + |x_old|) or |f(x)| < tol
+        Relative step tolerance. Iteration stops when
+        |x_new - x_old| < tol * (1 + |x_old|), or when the residual of the
+        normalized polynomial is at round-off level (|f(x)| < 10*eps).
         Default: 1e-6
     max_iter : int, optional
         Maximum number of iterations. Default: 20
@@ -155,14 +251,23 @@ def Roots(coeffs, init_guess=1.0 + 0j, tol=1e-6, max_iter=20):
     ------
     - Uses complex arithmetic internally to handle complex roots
     - Includes numerical safeguards against division by zero
-    - Uses relative tolerance for better handling of roots at different scales
+    - The coefficients are normalized by their largest magnitude, so the
+      result does not depend on the overall scale of the polynomial (the
+      dynamic-model coefficients scale with powers of the resolved fields).
+      Before 2026-11-19 an absolute residual test |f(x)| < tol made the root
+      depend on field amplitude.
     - The algorithm is JIT-compiled for performance
 
     """
 
     # Convert to complex arithmetic to handle complex roots
     cdtype = jnp.complex128 if jax.config.jax_enable_x64 else jnp.complex64
+    rdtype = jnp.float64 if jax.config.jax_enable_x64 else jnp.float32
     coeffs = coeffs.astype(cdtype)
+    # Normalize: roots are unchanged, the residual test becomes scale-free
+    scale = jnp.max(jnp.abs(coeffs))
+    coeffs = coeffs / jnp.where(scale > 0, scale, 1.0)
+    res_tol = 10 * jnp.finfo(rdtype).eps
     x = jnp.asarray(init_guess, dtype=cdtype)
 
     # Polynomial degree
@@ -226,7 +331,7 @@ def Roots(coeffs, init_guess=1.0 + 0j, tol=1e-6, max_iter=20):
         # Check convergence using both relative step size and function value
         # This handles both large and small roots effectively
         converged_step = jnp.abs(x_new - x) < tol * (1 + jnp.abs(x))
-        converged_value = jnp.abs(f_x) < tol
+        converged_value = jnp.abs(f_x) < res_tol
         new_converged = converged_step | converged_value
 
         return x_new, iteration + 1, new_converged

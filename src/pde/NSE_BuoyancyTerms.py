@@ -90,8 +90,12 @@ def BuoyancyOpt1(TH, H, ZeRo3D):
     # Update the buoyancy array
     buoyancy = buoyancy.at[:, :, 1:nz].set(buoyancy_interior)
 
-    # Set bottom boundary condition
+    # Set bottom and top (lid) boundary conditions: w = 0 at both w-nodes, so
+    # the buoyancy force there must vanish; a non-zero lid value is not seen by
+    # the top Neumann row of the pressure solver and left a divergence error
+    # at the top resolved level (corrected 2026-11-19).
     buoyancy = buoyancy.at[:, :, 0].set(0.0)
+    buoyancy = buoyancy.at[:, :, nz - 1].set(0.0)
 
     return buoyancy
 
@@ -144,7 +148,11 @@ def BuoyancyOpt2(TH, H, ZeRo3D):
     # Update the buoyancy array
     buoyancy = buoyancy.at[:, :, 1:nz].set(buoyancy_interior)
 
-    # Set bottom boundary condition
+    # Set bottom and top (lid) boundary conditions: w = 0 at both w-nodes, so
+    # the buoyancy force there must vanish; a non-zero lid value is not seen by
+    # the top Neumann row of the pressure solver and left a divergence error
+    # at the top resolved level (corrected 2026-11-19).
     buoyancy = buoyancy.at[:, :, 0].set(0.0)
+    buoyancy = buoyancy.at[:, :, nz - 1].set(0.0)
 
     return buoyancy

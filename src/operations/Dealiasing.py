@@ -66,14 +66,24 @@ def Dealias1(F_fft, ZeRo3D_pad_fft):
     # Allocate padded array
     F_pad_fft = ZeRo3D_pad_fft.copy()
 
-    # First quadrant
-    F_pad_fft = F_pad_fft.at[:nx_rfft, :ny_rfft, :].set(F_fft[:nx_rfft, :ny_rfft, :])
+    # Copy all modes except the x- and y-Nyquist modes, which are not Nyquist
+    # modes on the padded grid and would otherwise be doubled (they are also
+    # zeroed in Dealias2 and in the spectral derivatives). Corrected 2026-11-19.
 
-    # Second quadrant
-    F_pad_fft = F_pad_fft.at[mx - (nx_rfft-1):, :ny_rfft, :].set(F_fft[(nx_rfft-1):, :ny_rfft, :])
+    # First quadrant (kx >= 0)
+    F_pad_fft = F_pad_fft.at[:(nx_rfft-1), :(ny_rfft-1), :].set(F_fft[:(nx_rfft-1), :(ny_rfft-1), :])
+
+    # Second quadrant (kx < 0)
+    F_pad_fft = F_pad_fft.at[mx - (nx_rfft-2):, :(ny_rfft-1), :].set(F_fft[nx_rfft:, :(ny_rfft-1), :])
 
     # Transform back to spatial domain using irfft2
-    F_pad = jnp.fft.irfft2(F_pad_fft, axes=(0, 1), s=(mx, my))
+    # Scale by (mx*my)/(nx*ny) = 9/4 so that the padded field has the same
+    # physical amplitude as the input. With this convention Dealias2 applies
+    # 4/9 and products of ANY number of padded fields are normalized
+    # correctly (before 2026-11-19 the padded fields carried a factor 4/9 and
+    # Dealias2 applied 9/4, which is exact only for products of two fields;
+    # the three-factor SGS products were attenuated by 4/9 when FGR = 1).
+    F_pad = (9.0 / 4.0) * jnp.fft.irfft2(F_pad_fft, axes=(0, 1), s=(mx, my))
 
     return F_pad
 
@@ -108,7 +118,8 @@ def Dealias2(F_pad_fft, ZeRo3D_fft):
     # Second quadrant
     F_fft = F_fft.at[nx_rfft:, :(ny_rfft-1), :].set(F_pad_fft[mx - (nx_rfft-2):, :(ny_rfft-1), :])
 
-    # Transform back to physical space and apply 9/4 scaling
-    F = (9.0 / 4.0) * jnp.fft.irfft2(F_fft, axes=(0, 1), s=(nx, ny))
+    # Transform back to physical space; the factor 4/9 = (nx*ny)/(mx*my)
+    # undoes the change of FFT normalization between the two grid sizes
+    F = (4.0 / 9.0) * jnp.fft.irfft2(F_fft, axes=(0, 1), s=(nx, ny))
 
     return F

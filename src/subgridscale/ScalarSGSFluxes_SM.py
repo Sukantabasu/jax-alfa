@@ -22,7 +22,10 @@ File: ScalarSGSFluxes.py
                 code restructuring, and performance optimization
 :Date: 2025-4-29
 :Description: computes SGS scalar fluxes for the eddy-diffusivity model:
-              q_i = -2(L^2) * Cs^2/Pr_t * |S| * (∂TH/∂x_i)
+              q_i = -(L^2) * Cs^2/Pr_t * |S| * (∂TH/∂x_i)
+              (no leading factor of 2: the dynamic scalar procedure diagnoses
+              Cs^2/Pr_t with this normalization, as in the original MATLAB
+              MLp_ScalarSgs.m / MLp_LocScSMAG.m; corrected 2026-11-19)
               where Cs^2/Pr_t is the model coefficient, |S| is the strain rate
               magnitude, and ∂TH/∂x_i is the potential temperature gradient
 """
@@ -75,7 +78,7 @@ def ScalarFluxesUVPnodes_Dealias(
     """
 
     # Compute SGS scalar fluxes at UVP nodes
-    preCompute = -2 * (L ** 2) * Cs2PrRatio_3D_pad * S_pad
+    preCompute = -(L ** 2) * Cs2PrRatio_3D_pad * S_pad
     qx_pad = preCompute * dTHdx_pad
     qy_pad = preCompute * dTHdy_pad
 
@@ -115,7 +118,7 @@ def ScalarFluxesUVPnodes_NoDealias(
     """
 
     # Compute SGS scalar fluxes at UVP nodes
-    preCompute = -2 * (L ** 2) * Cs2PrRatio_3D * S
+    preCompute = -(L ** 2) * Cs2PrRatio_3D * S
     qx = preCompute * dTHdx
     qy = preCompute * dTHdy
 
@@ -161,7 +164,7 @@ def ScalarFluxesWnodes_Dealias(
 
     # Interior points for vertical flux (on w-nodes)
     qz_pad = qz_pad.at[:, :, 1:nz - 1].set(
-        -2 * (L ** 2) * StagGridAvg(Cs2PrRatio_3D_pad[:, :, :nz - 1]) *
+        -(L ** 2) * StagGridAvg(Cs2PrRatio_3D_pad[:, :, :nz - 1]) *
         S_pad[:, :, 1:nz - 1] * dTHdz_pad[:, :, 1:nz - 1]
     )
 
@@ -209,7 +212,7 @@ def ScalarFluxesWnodes_NoDealias(
 
     # Interior points for vertical flux (on w-nodes)
     qz = qz.at[:, :, 1:nz - 1].set(
-        -2 * (L ** 2) * StagGridAvg(Cs2PrRatio_3D[:, :, :nz - 1]) *
+        -(L ** 2) * StagGridAvg(Cs2PrRatio_3D[:, :, :nz - 1]) *
         S[:, :, 1:nz - 1] * dTHdz[:, :, 1:nz - 1]
     )
 

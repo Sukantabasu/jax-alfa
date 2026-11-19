@@ -445,11 +445,39 @@ def SurfaceFlux_HeterogeneousPrescribedTemperature(u, v, TH, TH_sfc_t,
 
 
 # ============================================================
+#  psi_h at the moisture reference height
+# ============================================================
+
+def _psi_h0_moisture(psi2D_h0, invOB):
+    """
+    psi_h evaluated at the moisture reference height z_q/L.
+
+    The heat-flux routines evaluate psi2D_h0 at the temperature reference
+    height (zTemperature, or z0T). When the moisture reference height differs
+    (zMoisture != zTemperature), psi_h must be re-evaluated at z_q/L; otherwise
+    psi2D_h0 is reused unchanged (identical results). Added 2026-11-19.
+    The stable/unstable branch follows the sign of the domain-mean 1/L, which
+    matches is_stable (qz_sfc_avg <= 0) in _update_MOSTfunctions.
+    """
+    _z_ref_T = zTemperature if zTemperature > 0.0 else z0T
+    _z_ref_Q = zMoisture if zMoisture > 0.0 else z0T
+    if _z_ref_Q == _z_ref_T:
+        return psi2D_h0
+    z_ref_Q_over_L = (_z_ref_Q / z_scale) * invOB
+    _, psi2D_hq0, _, _ = jax.lax.cond(
+        jnp.mean(invOB) >= 0,
+        lambda _: MOSTstable(z_ref_Q_over_L),
+        lambda _: MOSTunstable(z_ref_Q_over_L),
+        operand=None)
+    return psi2D_hq0
+
+
+# ============================================================
 #  optMoistureSurfBC = 2 : time-varying prescribed surface humidity
 # ============================================================
 
 @jax.jit
-def SurfaceMoistureFlux_HomogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions):
+def SurfaceMoistureFlux_HomogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions, invOB):
     """
     optMoistureSurfBC=2, optSurfFlux=0: diagnose surface moisture flux from
     prescribed surface specific humidity (spatially homogeneous).
@@ -462,6 +490,7 @@ def SurfaceMoistureFlux_HomogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions)
     ustar : jnp.ndarray (nx, ny) — friction velocity
     Q_sfc_t : scalar — prescribed surface Q at current timestep (kg/kg)
     MOSTfunctions : tuple of six (nx, ny) stability arrays
+    invOB : inverse Obukhov length (non-dim), from the heat-flux routine
 
     Returns:
     --------
@@ -472,14 +501,15 @@ def SurfaceMoistureFlux_HomogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions)
 
     Q_air_avg = jnp.mean(Q[:, :, 0])
     _z_ref_Q  = zMoisture if zMoisture > 0.0 else z0T
-    denom_qm  = jnp.log(0.5 * dz * z_scale / _z_ref_Q) + psi2D_h - psi2D_h0
+    psi2D_hq0 = _psi_h0_moisture(psi2D_h0, invOB)
+    denom_qm  = jnp.log(0.5 * dz * z_scale / _z_ref_Q) + psi2D_h - psi2D_hq0
     qm_sfc_2D = ustar * vonk * (Q_sfc_t - Q_air_avg) * One2D / denom_qm
 
     return qm_sfc_2D
 
 
 @jax.jit
-def SurfaceMoistureFlux_HeterogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions):
+def SurfaceMoistureFlux_HeterogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunctions, invOB):
     """
     optMoistureSurfBC=2, optSurfFlux=1: per-column surface moisture flux from
     prescribed surface specific humidity.
@@ -490,6 +520,7 @@ def SurfaceMoistureFlux_HeterogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunction
     ustar : jnp.ndarray (nx, ny) — friction velocity (per column)
     Q_sfc_t : scalar — prescribed surface Q (kg/kg, spatially uniform)
     MOSTfunctions : tuple of six (nx, ny) stability arrays
+    invOB : inverse Obukhov length (non-dim), from the heat-flux routine
 
     Returns:
     --------
@@ -499,7 +530,8 @@ def SurfaceMoistureFlux_HeterogeneousPrescribedQ(Q, ustar, Q_sfc_t, MOSTfunction
 
     Q_air_loc = Q[:, :, 0]
     _z_ref_Q  = zMoisture if zMoisture > 0.0 else z0T
-    denom_qm  = jnp.log(0.5 * dz * z_scale / _z_ref_Q) + psi2D_h - psi2D_h0
+    psi2D_hq0 = _psi_h0_moisture(psi2D_h0, invOB)
+    denom_qm  = jnp.log(0.5 * dz * z_scale / _z_ref_Q) + psi2D_h - psi2D_hq0
     qm_sfc_2D = ustar * vonk * (Q_sfc_t - Q_air_loc) / denom_qm
 
     return qm_sfc_2D

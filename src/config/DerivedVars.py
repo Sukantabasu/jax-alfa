@@ -118,3 +118,11 @@ SampleInterval = int( SampleInterval_sec / dt)
 OutputInterval = int( round(OutputInterval_sec / dt / 5) * 5)
 # Output 3D fields every Output3DInterval (steps)
 Output3DInterval = int( round(Output3DInterval_sec / dt / 5) * 5)
+
+# Guard (2026-11-19): a zero interval would crash the time loop (modulo by 0)
+for _name, _val in (('SampleInterval_sec', SampleInterval),
+                    ('OutputInterval_sec', OutputInterval),
+                    ('Output3DInterval_sec', Output3DInterval)):
+    if _val < 1:
+        raise ValueError(f'{_name} is shorter than the time step (or rounds to 0 steps '
+                         f'with dt = {dt} s); increase it in Config.py.')

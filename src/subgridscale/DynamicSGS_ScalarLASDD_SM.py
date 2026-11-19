@@ -43,7 +43,7 @@ from ..operations.Filtering import Filtering_Level1, Filtering_Level2
 
 # Import helper functions
 from ..utilities.Utilities import PlanarMean, StagGridAvg
-from ..utilities.Utilities import Roots, Imfilter
+from ..utilities.Utilities import MaxRealRootBeta, Imfilter
 
 
 # ============================================================
@@ -69,30 +69,14 @@ def ComputeBeta2(ff, ee, dd, cc, bb, aa):
         1D array of the maximum valid real root for each vertical level
     """
 
+    # All five roots (Laguerre with deflation) and the selection rule of the
+    # original MATLAB code: largest real root, beta = 1 unless it lies in (0, 5).
+    # (Until 2026-11-19: multi-start Laguerre could miss real roots, and the
+    # largest root inside (0, 5) was taken instead of applying this rule.)
     def find_roots_for_level(k):
-        # Construct polynomial coefficients for this level
         coeffs = jnp.array([ff[k], ee[k], dd[k], cc[k], bb[k], aa[k]])
+        return MaxRealRootBeta(coeffs)
 
-        # Use initial guesses concentrated in the expected range (0.5-1.5)
-        # with a few wider points to catch outliers
-        guesses = jnp.array([0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.5])
-        roots = jax.vmap(lambda guess:
-                         Roots(coeffs, init_guess=guess))(guesses)
-
-        # Filter valid real roots
-        valid_roots = jnp.where(
-            (jnp.abs(jnp.imag(roots)) < 1e-6) &
-            (jnp.real(roots) > 0) &
-            (jnp.real(roots) < 5.0),
-            jnp.real(roots),
-            jnp.nan
-        )
-
-        # Get maximum valid root or default to 1.0
-        max_root = jnp.nanmax(valid_roots)
-        return jnp.where(jnp.isnan(max_root), 1.0, max_root)
-
-    # Apply to all levels
     return jax.vmap(find_roots_for_level)(jnp.arange(ff.shape[0]))
 
 

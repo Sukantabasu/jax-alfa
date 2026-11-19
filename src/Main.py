@@ -270,10 +270,10 @@ for iteration in range(istep, nsteps+1, 1):
             Q_sfc_t = MoistureSurfaceBC_series[iteration - 1]
             if optSurfFlux == 0:
                 qm_sfc_step = SurfaceMoistureFlux_HomogeneousPrescribedQ(
-                    Q, ustar, Q_sfc_t, MOSTfunctions)
+                    Q, ustar, Q_sfc_t, MOSTfunctions, invOB)
             else:
                 qm_sfc_step = SurfaceMoistureFlux_HeterogeneousPrescribedQ(
-                    Q, ustar, Q_sfc_t, MOSTfunctions)
+                    Q, ustar, Q_sfc_t, MOSTfunctions, invOB)
         qm_sfc_avg = jnp.mean(qm_sfc_step)
     else:
         qm_sfc_step = ZeRo2D
@@ -485,6 +485,23 @@ for iteration in range(istep, nsteps+1, 1):
         RHS_Q = RHS_Moisture(Q, QAdvectionSum, divqm, RayleighDampCoeff_stag, Qadv)
 
     # ------------------------------------------------------------
+    #  First step: initialize RHS of the previous time step
+    # ------------------------------------------------------------
+    # Done BEFORE the pressure solve, with the pre-pressure RHS, so that the
+    # first (Euler) update u + dt*(1.5*(RHS - grad p) - 0.5*RHS) is consistent
+    # with the AB2 weights in PressureRC and exactly divergence-free. (Until
+    # 2026-11-19 this block ran after the pressure solve with RHS_previous = 0
+    # in PressureRC, leaving one third of the initial divergence.)
+
+    if iteration == istep:
+        RHS_u_previous  = RHS_u
+        RHS_v_previous  = RHS_v
+        RHS_w_previous  = RHS_w
+        RHS_TH_previous = RHS_TH
+        if optMoisture >= 1:
+            RHS_Q_previous = RHS_Q
+
+    # ------------------------------------------------------------
     #  Pressure solution
     # ------------------------------------------------------------
 
@@ -508,18 +525,6 @@ for iteration in range(istep, nsteps+1, 1):
     RHS_u = RHS_u - dpdx
     RHS_v = RHS_v - dpdy
     RHS_w = RHS_w - dpdz
-
-    # ------------------------------------------------------------
-    #  Initialize RHS terms for previous time step
-    # ------------------------------------------------------------
-
-    if iteration == istep:
-        RHS_u_previous  = RHS_u
-        RHS_v_previous  = RHS_v
-        RHS_w_previous  = RHS_w
-        RHS_TH_previous = RHS_TH
-        if optMoisture >= 1:
-            RHS_Q_previous = RHS_Q
 
     # ------------------------------------------------------------
     #  Time advancement

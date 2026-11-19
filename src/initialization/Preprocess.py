@@ -30,7 +30,6 @@ numerous times during a simulation
 #  Imports
 # ============================================================
 
-import numpy as np
 import jax.numpy as jnp
 
 # Import configuration from namelist
@@ -101,15 +100,10 @@ def Wavenumber():
     ky2 = ky[None, :, None]  # Reshape for broadcasting
     ky2 = jnp.broadcast_to(ky2, (nx, ny_rfft, nz))
 
-    # Zero the whole Nyquist row and column in both arrays, as in OCTLES
-    # (MLp_Les.m: kr2(:,ny/2+1) = 0; kc2(nx/2+1,:) = 0). Zeroing only the
-    # 1D vectors left mixed-Nyquist modes with a derivative that the
-    # pressure solve (which drops all Nyquist modes) cannot remove.
-    # Done with constant masks: an .at[].set() scatter on the broadcast
-    # arrays made every HAL run (JAX 0.6.0, GPU) blow up within 40 steps,
-    # although the arrays themselves came out correct (2026-11-19).
-    kx2 = kx2 * jnp.asarray(np.arange(ny_rfft) != ny // 2, kx2.dtype)[None, :, None]
-    ky2 = ky2 * jnp.asarray(np.arange(nx) != nx // 2, ky2.dtype)[:, None, None]
+    # Zero the whole Nyquist row and column, as in OCTLES (MLp_Les.m)
+    # Note: JAX 0.6.0 (GPU) miscompiles this; use JAX >= 0.10
+    kx2 = kx2.at[:, ny // 2, :].set(0)
+    ky2 = ky2.at[nx // 2, :, :].set(0)
 
     return kx2, ky2
 
